@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>InsightHub — لوحة إدارة المنصة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root,[data-theme="light"]{
+  --bg:#f0f2f7;--surface:#ffffff;--surface2:#f5f6fa;--surface3:#eaecf2;
+  --text:#161c2d;--muted:#6272a4;--border:#dde0ed;
+  --primary:#3458d4;--primary-dark:#2444b8;--primary-light:#dfe8ff;
+  --accent:#0fb5ae;--accent-light:#d0f5f4;
+  --success:#2d9d5a;--warning:#d28b00;--error:#d14c67;--orange:#c8612a;
+  --shadow:0 8px 28px rgba(22,28,45,.09);--shadow-sm:0 2px 8px rgba(22,28,45,.06);
+  --radius:1rem;--radius2:1.25rem;
+}
+[data-theme="dark"]{
+  --bg:#0d1117;--surface:#161b27;--surface2:#1e2535;--surface3:#252d40;
+  --text:#e8eeff;--muted:#8899cc;--border:#2a3352;
+  --primary:#7da0ff;--primary-dark:#5a7de8;--primary-light:#1e2f60;
+  --accent:#20d1bf;--accent-light:#0d3533;
+  --success:#62c887;--warning:#f1be4a;--error:#f07a92;--orange:#e07545;
+  --shadow:0 8px 28px rgba(0,0,0,.3);--shadow-sm:0 2px 8px rgba(0,0,0,.2);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);height:100dvh;overflow:hidden}
+a{text-decoration:none;color:inherit}
+button,input,select,textarea{font:inherit;border:0}
+button{cursor:pointer}
+canvas{max-width:100%}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:right;padding:.72rem .9rem;border-bottom:1px solid color-mix(in srgb,var(--border) 70%, transparent)}
+th{font-size:.76rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+
+/* LAYOUT */
+.shell{display:grid;grid-template-columns:285px 1fr;height:100dvh}
+.sidebar{background:var(--surface);border-left:1px solid color-mix(in srgb,var(--border) 70%, transparent);padding:1.1rem;overflow-y:auto;display:flex;flex-direction:column;gap:.2rem}
+.main-area{display:grid;grid-template-rows:auto 1fr;overflow:hidden}
+.topbar{background:color-mix(in srgb,var(--bg) 90%, transparent);backdrop-filter:blur(14px);border-bottom:1px solid color-mix(in srgb,var(--border) 70%, transparent);padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-shrink:0}
+.main{overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:1rem}
+
+/* SIDEBAR */
+.brand{display:flex;align-items:center;gap:.8rem;margin-bottom:1.25rem;padding:.2rem 0}
+.brand-mark{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--primary),var(--accent));display:grid;place-items:center;flex-shrink:0;box-shadow:0 4px 14px color-mix(in srgb,var(--primary) 30%, transparent)}
+.brand-name{font-size:1.05rem;font-weight:900}
+.brand-tag{font-size:.72rem;color:var(--muted);font-weight:700}
+.nav-label{font-size:.72rem;font-weight:800;color:var(--muted);padding:.1rem .7rem;margin-top:.7rem;text-transform:uppercase;letter-spacing:.05em}
+.nav-link{display:flex;align-items:center;gap:.7rem;padding:.78rem .85rem;border-radius:.85rem;color:var(--muted);font-size:.88rem;font-weight:600;transition:.15s;position:relative}
+.nav-link svg{flex-shrink:0;opacity:.7}
+.nav-link:hover{background:var(--surface2);color:var(--text)}
+.nav-link:hover svg{opacity:1}
+.nav-link.active{background:var(--primary-light);color:var(--primary)}
+.nav-link.active svg{opacity:1}
+.nav-badge{margin-right:auto;font-size:.7rem;padding:.15rem .5rem;border-radius:999px;background:var(--error);color:#fff;font-weight:800}
+.sidebar-footer{margin-top:auto;padding-top:1rem;border-top:1px solid color-mix(in srgb,var(--border) 70%, transparent)}
+.admin-info{display:flex;align-items:center;gap:.75rem}
+.admin-avatar{width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:grid;place-items:center;color:var(--primary);font-weight:900;font-size:.9rem;flex-shrink:0}
+.admin-name{font-size:.88rem;font-weight:800}
+.admin-role{font-size:.73rem;color:var(--muted)}
+
+/* TOPBAR */
+.page-title{font-size:1.15rem;font-weight:800}
+.topbar-right{display:flex;align-items:center;gap:.6rem}
+.icon-btn{width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid color-mix(in srgb,var(--border) 80%, transparent);display:grid;place-items:center;color:var(--muted);transition:.15s}
+.icon-btn:hover{color:var(--text)}
+.search-box{display:flex;align-items:center;gap:.6rem;background:var(--surface);border:1px solid color-mix(in srgb,var(--border) 80%, transparent);padding:.65rem 1rem;border-radius:999px;min-width:260px}
+.search-box input{background:none;outline:none;color:var(--text);font-size:.88rem;width:100%}
+
+/* PAGES */
+.page{display:none;animation:fadeUp .2s ease both}
+.page.active{display:contents}
+@keyframes fadeUp{from{opacity:.3;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* CARDS */
+.card,.stat-card,.chart-card,.table-card,.form-card{background:var(--surface);border:1px solid color-mix(in srgb,var(--border) 70%, transparent);border-radius:var(--radius2);box-shadow:var(--shadow-sm)}
+.card,.chart-card,.table-card,.form-card{padding:1.2rem}
+.stat-card{padding:1.1rem}
+
+/* GRIDS */
+.grid-4,.grid-3,.grid-2{display:grid;gap:1rem}
+.grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+/* STAT CARDS */
+.stat-label{font-size:.78rem;color:var(--muted);margin-bottom:.3rem}
+.stat-value{font-size:1.85rem;font-weight:900;line-height:1.1}
+.stat-foot{font-size:.76rem;color:var(--muted);margin-top:.25rem;display:flex;align-items:center;gap:.3rem}
+.stat-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:1.1rem;margin-bottom:.65rem}
+.trend-up{color:var(--success)}
+.trend-down{color:var(--error)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:.3rem;padding:.28rem .65rem;border-radius:999px;font-size:.74rem;font-weight:800}
+.b-success{background:color-mix(in srgb,var(--success) 14%, transparent);color:var(--success)}
+.b-warning{background:color-mix(in srgb,var(--warning) 15%, transparent);color:var(--warning)}
+.b-error{background:color-mix(in srgb,var(--error) 13%, transparent);color:var(--error)}
+.b-blue{background:color-mix(in srgb,#1d93d1 12%, transparent);color:#1d93d1}
+.b-primary{background:var(--primary-light);color:var(--primary)}
+.b-muted{background:color-mix(in srgb,var(--muted) 10%, transparent);color:var(--muted)}
+.b-accent{background:var(--accent-light);color:var(--accent)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;padding:.72rem 1.1rem;border-radius:.85rem;font-weight:700;font-size:.87rem;min-height:40px;transition:.18s}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-secondary{background:var(--primary-light);color:var(--primary)}
+.btn-ghost{background:transparent;border:1px solid color-mix(in srgb,var(--border) 85%, transparent);color:var(--text)}
+.btn-danger{background:color-mix(in srgb,var(--error) 12%, transparent);color:var(--error)}
+.btn-success{background:color-mix(in srgb,var(--success) 12%, transparent);color:var(--success)}
+.btn-accent{background:var(--accent-light);color:var(--accent)}
+.btn-sm{padding:.5rem .8rem;font-size:.8rem;min-height:34px}
+
+/* FORM ELEMENTS */
+.field{display:grid;gap:.35rem}
+.field-label{font-size:.84rem;font-weight:700}
+.input,.select,.textarea{width:100%;padding:.82rem 1rem;background:var(--surface2);border:1.5px solid color-mix(in srgb,var(--border) 80%, transparent);border-radius:.85rem;color:var(--text);outline:none;transition:.15s}
+.input:focus,.select:focus,.textarea:focus{border-color:var(--primary);background:var(--surface)}
+.textarea{min-height:100px;resize:vertical}
+.fields-row{display:grid;grid-template-columns:1fr 1fr;gap:.85rem}
+
+/* SEC HEAD */
+.sec-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+.sec-title{font-size:.98rem;font-weight:800}
+.sec-sub{font-size:.82rem;color:var(--muted);margin-top:.15rem}
+.muted{color:var(--muted)}
+
+/* PROGRESS */
+.prog{height:7px;background:color-mix(in srgb,var(--border) 50%, transparent);border-radius:999px;overflow:hidden}
+.prog>span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--primary),var(--accent))}
+
+/* MODAL */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);display:none;place-items:center;z-index:100;padding:1rem}
+.modal.open{display:grid}
+.modal-card{background:var(--surface);border-radius:var(--radius2);box-shadow:0 24px 64px rgba(0,0,0,.25);padding:1.5rem;width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+.modal-head h3{font-size:1.05rem;font-weight:900}
+
+/* AUDIT TIMELINE */
+.timeline{display:grid;gap:.6rem}
+.audit-item{display:flex;gap:.85rem;padding:.85rem;background:var(--surface2);border-radius:.85rem;border-right:3px solid transparent}
+.audit-item.warn{border-color:var(--warning)}
+.audit-item.danger{border-color:var(--error)}
+.audit-item.info{border-color:var(--primary)}
+.audit-time{font-size:.75rem;color:var(--muted);white-space:nowrap;font-weight:700;min-width:42px}
+
+/* TABS */
+.tabs{display:flex;gap:.4rem;flex-wrap:wrap}
+.tab{padding:.52rem .88rem;border-radius:999px;background:var(--surface2);color:var(--muted);font-size:.83rem;font-weight:700;cursor:pointer;border:1px solid transparent;transition:.15s}
+.tab.active{background:var(--primary-light);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 20%, transparent)}
+
+/* RESULT PANELS */
+.rp{display:none}.rp.active{display:block}
+
+/* LOADING */
+.loading-overlay{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 88%, transparent);backdrop-filter:blur(4px);display:none;place-items:center;z-index:200;flex-direction:column;gap:.7rem}
+.loading-overlay.show{display:flex}
+.spinner{width:40px;height:40px;border-radius:50%;border:4px solid var(--border);border-top-color:var(--primary);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:2.5rem;color:var(--muted);font-size:.9rem}
+
+/* NOTIFICATION */
+.notif-item{display:flex;gap:.8rem;padding:.85rem;border-radius:.85rem;background:var(--surface2)}
+.notif-item.unread{background:color-mix(in srgb,var(--primary) 6%, var(--surface2));border:1px solid color-mix(in srgb,var(--primary) 18%, transparent)}
+.n-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:.4rem}
+
+/* RESPONSIVE */
+@media(max-width:960px){.shell{grid-template-columns:1fr}.sidebar{display:none;position:fixed;inset-y:0;right:0;width:285px;z-index:50;box-shadow:var(--shadow)}.sidebar.open{display:flex}.grid-4{grid-template-columns:repeat(2,1fr)}.search-box{min-width:160px}}
+@media(max-width:600px){.grid-4,.grid-3,.grid-2{grid-template-columns:1fr}.fields-row{grid-template-columns:1fr}.search-box{display:none}}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loader"><div class="spinner"></div><div style="color:var(--muted);font-size:.88rem">جاري التحميل...</div></div>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      </div>
+      <div><div class="brand-name">InsightHub</div><div class="brand-tag">⚙️ لوحة الإدارة</div></div>
+    </div>
+
+    <div class="nav-label">الرئيسية</div>
+    <a class="nav-link active" data-page="overview" onclick="goto('overview',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      نظرة عامة
+    </a>
+    <a class="nav-link" data-page="analytics" onclick="goto('analytics',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      إحصائيات المنصة
+    </a>
+
+    <div class="nav-label">إدارة المستخدمين</div>
+    <a class="nav-link" data-page="users" onclick="goto('users',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      المستخدمون
+      <span class="nav-badge" id="usersBadge">0</span>
+    </a>
+    <a class="nav-link" data-page="subscriptions" onclick="goto('subscriptions',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      الاشتراكات
+    </a>
+    <a class="nav-link" data-page="payments" onclick="goto('payments',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      المدفوعات
+    </a>
+
+    <div class="nav-label">إدارة التحليلات</div>
+    <a class="nav-link" data-page="all-analyses" onclick="goto('all-analyses',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      جميع التحليلات
+    </a>
+    <a class="nav-link" data-page="results-view" onclick="goto('results-view',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      عرض النتائج
+    </a>
+
+    <div class="nav-label">الدعم والجودة</div>
+    <a class="nav-link" data-page="tickets" onclick="goto('tickets',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      تذاكر الدعم
+      <span class="nav-badge" id="ticketsBadge" style="display:none">0</span>
+    </a>
+    <a class="nav-link" data-page="complaints" onclick="goto('complaints',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      الشكاوى
+      <span class="nav-badge" id="complaintsBadge" style="display:none">0</span>
+    </a>
+
+    <div class="nav-label">النظام</div>
+    <a class="nav-link" data-page="plans-mgmt" onclick="goto('plans-mgmt',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      إدارة الخطط
+    </a>
+    <a class="nav-link" data-page="notifications-mgmt" onclick="goto('notifications-mgmt',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      إرسال إشعار
+    </a>
+    <a class="nav-link" data-page="audit" onclick="goto('audit',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      سجل التدقيق
+    </a>
+    <a class="nav-link" data-page="settings" onclick="goto('settings',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      الإعدادات
+    </a>
+
+    <div class="sidebar-footer">
+      <div class="admin-info">
+        <div class="admin-avatar" id="adminInitial">A</div>
+        <div>
+          <div class="admin-name" id="adminName">مدير</div>
+          <div class="admin-role" id="adminRoleLbl">admin</div>
+        </div>
+        <button class="btn btn-danger btn-sm" style="margin-right:auto" onclick="logout()">خروج</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <div class="main-area">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <button class="icon-btn" id="menuToggle">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="page-title" id="pageTitle">نظرة عامة</div>
+      </div>
+      <div class="topbar-right">
+        <div class="search-box">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="بحث..." id="globalSearch">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('addUserModal')">+ مستخدم</button>
+        <button class="icon-btn" id="themeBtn" title="تبديل الثيم">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="main" id="mainContent">
+
+      <!-- OVERVIEW -->
+      <section class="page active" id="page-overview">
+        <div class="grid-4" id="overviewStats">
+          <div class="stat-card"><div class="stat-icon" style="background:var(--primary-light);color:var(--primary)">👥</div><div class="stat-label">إجمالي المستخدمين</div><div class="stat-value" id="st-users">—</div><div class="stat-foot trend-up">↑ نمو مستمر</div></div>
+          <div class="stat-card"><div class="stat-icon" style="background:color-mix(in srgb,var(--success) 14%, transparent);color:var(--success)">📊</div><div class="stat-label">التحليلات المكتملة</div><div class="stat-value" id="st-analyses">—</div><div class="stat-foot trend-up">↑ هذا الأسبوع</div></div>
+          <div class="stat-card"><div class="stat-icon" style="background:color-mix(in srgb,var(--warning) 14%, transparent);color:var(--warning)">💳</div><div class="stat-label">إجمالي الإيرادات</div><div class="stat-value" id="st-revenue">—</div><div class="stat-foot trend-up">↑ هذا الشهر</div></div>
+          <div class="stat-card"><div class="stat-icon" style="background:color-mix(in srgb,var(--error) 13%, transparent);color:var(--error)">⚠️</div><div class="stat-label">تذاكر مفتوحة</div><div class="stat-value" id="st-tickets">—</div><div class="stat-foot trend-down">تحتاج متابعة</div></div>
+        </div>
+        <div class="grid-2">
+          <div class="chart-card">
+            <div class="sec-head"><div class="sec-title">الإيرادات الشهرية</div></div>
+            <div style="position:relative;height:200px;width:100%"><canvas id="revenueChart"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="sec-head"><div class="sec-title">توزيع الاشتراكات</div></div>
+            <div style="position:relative;height:200px;width:100%"><canvas id="subsChart"></canvas></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="chart-card">
+            <div class="sec-head"><div class="sec-title">نشاط التحليلات اليومي</div></div>
+            <div style="position:relative;height:180px;width:100%"><canvas id="activityChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="sec-head"><div class="sec-title">آخر التحليلات</div><button class="btn btn-secondary btn-sm" onclick="goto('all-analyses',null)">عرض الكل</button></div>
+            <div id="recentAnalyses" style="display:grid;gap:.55rem"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PLATFORM ANALYTICS -->
+      <section class="page" id="page-analytics">
+        <div class="grid-4" id="analyticsKPIs">
+          <div class="stat-card"><div class="stat-label">إجمالي المنشورات المحللة</div><div class="stat-value" style="color:var(--primary)">23.2k</div><div class="stat-foot trend-up">↑ 12% الأسبوع الماضي</div></div>
+          <div class="stat-card"><div class="stat-label">متوسط وقت التحليل</div><div class="stat-value" style="color:var(--accent)">4.2د</div><div class="stat-foot trend-up">↑ تحسن 8%</div></div>
+          <div class="stat-card"><div class="stat-label">دقة تحليل المشاعر</div><div class="stat-value" style="color:var(--success)">97.4%</div><div class="stat-foot">معدل الموافقة</div></div>
+          <div class="stat-card"><div class="stat-label">الحمل على الخادم</div><div class="stat-value" style="color:var(--warning)">62%</div><div class="stat-foot">وضع طبيعي</div></div>
+        </div>
+        <div class="grid-3">
+          <div class="chart-card">
+            <div class="sec-title" style="margin-bottom:.75rem">استخدام الموارد</div>
+            <div style="position:relative;height:200px;width:100%"><canvas id="systemChart"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="sec-title" style="margin-bottom:.75rem">المنصات المُحللة</div>
+            <div style="position:relative;height:200px;width:100%"><canvas id="platformChart"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="sec-title" style="margin-bottom:.75rem">الطلبات بالساعة</div>
+            <div style="position:relative;height:200px;width:100%"><canvas id="hourlyChart"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="sec-title" style="margin-bottom:.85rem">مؤشرات الأداء الرئيسية</div>
+          <div class="grid-4">
+            <div style="padding:.85rem;background:var(--surface2);border-radius:.85rem;text-align:center"><div style="font-size:1.5rem;font-weight:900;color:var(--primary)">99.8%</div><div style="font-size:.78rem;color:var(--muted)">وقت التشغيل</div></div>
+            <div style="padding:.85rem;background:var(--surface2);border-radius:.85rem;text-align:center"><div style="font-size:1.5rem;font-weight:900;color:var(--success)">14ms</div><div style="font-size:.78rem;color:var(--muted)">متوسط وقت الاستجابة</div></div>
+            <div style="padding:.85rem;background:var(--surface2);border-radius:.85rem;text-align:center"><div style="font-size:1.5rem;font-weight:900;color:var(--accent)">0.02%</div><div style="font-size:.78rem;color:var(--muted)">معدل الأخطاء</div></div>
+            <div style="padding:.85rem;background:var(--surface2);border-radius:.85rem;text-align:center"><div style="font-size:1.5rem;font-weight:900;color:var(--warning)">4.8/5</div><div style="font-size:.78rem;color:var(--muted)">رضا المستخدمين</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- USERS -->
+      <section class="page" id="page-users">
+        <div class="sec-head">
+          <div><div class="sec-title">إدارة المستخدمين</div><div class="sec-sub">جميع المستخدمين المسجلين في المنصة</div></div>
+          <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+            <select class="input" id="userRoleFilter" style="width:140px" onchange="filterUsers()">
+              <option value="">كل الأدوار</option>
+              <option value="member">Member</option>
+              <option value="moderator">Moderator</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="openModal('addUserModal')">+ إضافة مستخدم</button>
+          </div>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>المستخدم</th><th>البريد</th><th>الدور</th><th>الحالة</th><th>الإنشاء</th><th>إجراءات</th></tr></thead>
+              <tbody id="usersTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SUBSCRIPTIONS -->
+      <section class="page" id="page-subscriptions">
+        <div class="sec-head"><div class="sec-title">الاشتراكات النشطة</div></div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>المستخدم</th><th>الخطة</th><th>دورة الفوترة</th><th>الحالة</th><th>الانتهاء</th><th>إجراءات</th></tr></thead>
+              <tbody id="subsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAYMENTS -->
+      <section class="page" id="page-payments">
+        <div class="sec-head">
+          <div><div class="sec-title">سجل المدفوعات</div><div class="sec-sub" id="paymentsTotalInfo">—</div></div>
+          <select class="input" id="payStatusFilter" style="width:160px" onchange="filterPayments()">
+            <option value="">كل الحالات</option>
+            <option value="completed">مكتملة</option>
+            <option value="pending">معلقة</option>
+            <option value="failed">فاشلة</option>
+            <option value="refunded">مستردة</option>
+          </select>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>المستخدم</th><th>المبلغ</th><th>العملة</th><th>الحالة</th><th>طريقة الدفع</th><th>التاريخ</th><th>إجراء</th></tr></thead>
+              <tbody id="paymentsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ALL ANALYSES -->
+      <section class="page" id="page-all-analyses">
+        <div class="sec-head">
+          <div><div class="sec-title">جميع التحليلات</div></div>
+          <select class="input" id="analysisStatusFilter" style="width:170px" onchange="filterAnalyses()">
+            <option value="">كل الحالات</option>
+            <option value="pending">معلقة</option>
+            <option value="collecting">جمع البيانات</option>
+            <option value="analyzing">قيد التحليل</option>
+            <option value="completed">مكتملة</option>
+            <option value="failed">فاشلة</option>
+          </select>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>العنوان</th><th>المستخدم</th><th>النوع</th><th>الحالة</th><th>التقدم</th><th>الكلمات المفتاحية</th><th>إجراءات</th></tr></thead>
+              <tbody id="allAnalysesBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESULTS VIEW -->
+      <section class="page" id="page-results-view">
+        <div class="sec-head"><div class="sec-title">عرض نتائج التحليل</div><button class="btn btn-ghost btn-sm" onclick="goto('all-analyses',null)">← العودة</button></div>
+        <div id="adminResultContent">
+          <div class="empty-state">اختر تحليلاً من صفحة "جميع التحليلات" لعرض نتائجه هنا.</div>
+        </div>
+      </section>
+
+      <!-- TICKETS -->
+      <section class="page" id="page-tickets">
+        <div class="sec-head">
+          <div><div class="sec-title">تذاكر الدعم الفني</div></div>
+          <select class="input" id="ticketStatusFilter" style="width:160px" onchange="filterTickets()">
+            <option value="">كل الحالات</option>
+            <option value="open">مفتوح</option>
+            <option value="in_progress">قيد المعالجة</option>
+            <option value="resolved">محلول</option>
+            <option value="closed">مغلق</option>
+          </select>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>الموضوع</th><th>المستخدم</th><th>التصنيف</th><th>الأولوية</th><th>الحالة</th><th>التاريخ</th><th>إجراء</th></tr></thead>
+              <tbody id="ticketsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- COMPLAINTS -->
+      <section class="page" id="page-complaints">
+        <div class="sec-head"><div class="sec-title">شكاوى التحليل</div></div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>العنوان</th><th>المستخدم</th><th>التصنيف</th><th>الحالة</th><th>التاريخ</th><th>إجراء</th></tr></thead>
+              <tbody id="complaintsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PLANS MANAGEMENT -->
+      <section class="page" id="page-plans-mgmt">
+        <div class="sec-head"><div class="sec-title">إدارة خطط الاشتراك</div></div>
+        <div class="grid-3" id="plansAdminGrid"></div>
+      </section>
+
+      <!-- SEND NOTIFICATION -->
+      <section class="page" id="page-notifications-mgmt">
+        <div class="sec-head"><div class="sec-title">إرسال إشعار للمستخدمين</div></div>
+        <div class="form-card" style="max-width:600px">
+          <div class="field" style="margin-bottom:.85rem">
+            <label class="field-label">المستلم</label>
+            <select class="select" id="notifRecipient">
+              <option value="all">جميع المستخدمين</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:.85rem">
+            <label class="field-label">نوع الإشعار</label>
+            <select class="select" id="notifType">
+              <option value="system">إشعار نظام</option>
+              <option value="subscription">اشتراك</option>
+              <option value="payment">دفع</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:.85rem">
+            <label class="field-label">العنوان</label>
+            <input class="input" id="notifTitle" placeholder="عنوان الإشعار">
+          </div>
+          <div class="field" style="margin-bottom:1.25rem">
+            <label class="field-label">الرسالة</label>
+            <textarea class="textarea" id="notifBody" placeholder="نص الإشعار..."></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="sendNotification()">إرسال الإشعار</button>
+          <div id="notifMsg" style="margin-top:.85rem;display:none"></div>
+        </div>
+      </section>
+
+      <!-- AUDIT LOG -->
+      <section class="page" id="page-audit">
+        <div class="sec-head">
+          <div><div class="sec-title">سجل التدقيق</div><div class="sec-sub">جميع العمليات الحساسة مرصودة هنا</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadAudit()">🔄 تحديث</button>
+        </div>
+        <div class="card"><div class="timeline" id="auditTimeline"></div></div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="page" id="page-settings">
+        <div class="sec-head"><div class="sec-title">إعدادات المنصة</div></div>
+        <div class="grid-2">
+          <div class="form-card">
+            <div class="sec-title" style="margin-bottom:1rem">الإعدادات العامة</div>
+            <div class="field" style="margin-bottom:.85rem"><label class="field-label">اسم المنصة</label><input class="input" value="InsightHub"></div>
+            <div class="field" style="margin-bottom:.85rem"><label class="field-label">التسجيل الجديد</label><select class="select"><option>مفتوح</option><option>مغلق</option></select></div>
+            <div class="field" style="margin-bottom:.85rem"><label class="field-label">الحد الأقصى للتحليلات المتزامنة</label><input class="input" type="number" value="50"></div>
+            <div class="field" style="margin-bottom:1.25rem"><label class="field-label">ملاحظات أمنية</label><textarea class="textarea" placeholder="ملاحظات الأمان للفريق..."></textarea></div>
+            <button class="btn btn-primary">حفظ الإعدادات</button>
+          </div>
+          <div class="form-card">
+            <div class="sec-title" style="margin-bottom:1rem">صلاحيات الأدوار</div>
+            <div class="field" style="margin-bottom:.85rem"><label class="field-label">Admin</label><select class="select"><option>كل الصلاحيات</option></select></div>
+            <div class="field" style="margin-bottom:.85rem"><label class="field-label">Moderator</label><select class="select"><option>الشكاوى + الدعم + عرض التحليلات</option></select></div>
+            <div class="field" style="margin-bottom:.85rem"><label class="field-label">Member</label><select class="select"><option>إنشاء تحليلات + عرض نتائجه فقط</option></select></div>
+            <div style="margin-top:1.25rem;padding:1rem;background:color-mix(in srgb,var(--error) 7%, transparent);border:1px solid color-mix(in srgb,var(--error) 20%, transparent);border-radius:.9rem">
+              <div style="font-weight:800;color:var(--error);margin-bottom:.5rem;font-size:.9rem">منطقة الخطر</div>
+              <button class="btn btn-danger btn-sm">إعادة تعيين الأذونات</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ADD USER MODAL -->
+<div class="modal" id="addUserModal">
+  <div class="modal-card">
+    <div class="modal-head"><h3>إضافة مستخدم جديد</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('addUserModal')">✕</button></div>
+    <div class="fields-row" style="margin-bottom:.85rem">
+      <div class="field"><label class="field-label">الاسم الكامل</label><input class="input" id="newUserName" placeholder="فؤاد مسلم"></div>
+      <div class="field"><label class="field-label">البريد الإلكتروني</label><input class="input" id="newUserEmail" type="email" placeholder="fouad@example.com"></div>
+    </div>
+    <div class="fields-row" style="margin-bottom:1.25rem">
+      <div class="field"><label class="field-label">الدور</label><select class="select" id="newUserRole"><option value="member">Member</option><option value="moderator">Moderator</option><option value="admin">Admin</option></select></div>
+    </div>
+    <div style="display:flex;gap:.65rem">
+      <button class="btn btn-primary" onclick="addUser()">إضافة</button>
+      <button class="btn btn-ghost" onclick="closeModal('addUserModal')">إلغاء</button>
+    </div>
+    <div id="addUserMsg" style="margin-top:.75rem;display:none"></div>
+  </div>
+</div>
+
+<!-- REPLY TICKET MODAL -->
+<div class="modal" id="replyModal">
+  <div class="modal-card">
+    <div class="modal-head"><h3 id="replyModalTitle">الرد على التذكرة</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('replyModal')">✕</button></div>
+    <div id="replyModalBody" style="margin-bottom:1rem;padding:.85rem;background:var(--surface2);border-radius:.85rem;font-size:.88rem;color:var(--muted)"></div>
+    <div class="field" style="margin-bottom:.85rem"><label class="field-label">الحالة الجديدة</label><select class="select" id="replyStatus"><option value="in_progress">قيد المعالجة</option><option value="resolved">محلول</option><option value="closed">مغلق</option></select></div>
+    <div class="field" style="margin-bottom:1.25rem"><label class="field-label">الرد</label><textarea class="textarea" id="replyText" placeholder="اكتب ردك هنا..."></textarea></div>
+    <div style="display:flex;gap:.65rem">
+      <button class="btn btn-primary" onclick="submitReply()">إرسال الرد</button>
+      <button class="btn btn-ghost" onclick="closeModal('replyModal')">إلغاء</button>
+    </div>
+    <div id="replyMsg" style="margin-top:.75rem;display:none"></div>
+  </div>
+</div>
+
+<!-- REPLY COMPLAINT MODAL -->
+<div class="modal" id="replyComplaintModal">
+  <div class="modal-card">
+    <div class="modal-head"><h3>الرد على الشكوى</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('replyComplaintModal')">✕</button></div>
+    <div id="complaintModalBody" style="margin-bottom:1rem;padding:.85rem;background:var(--surface2);border-radius:.85rem;font-size:.88rem;color:var(--muted)"></div>
+    <div class="field" style="margin-bottom:.85rem"><label class="field-label">الحالة</label><select class="select" id="complaintStatus"><option value="under_review">قيد المراجعة</option><option value="resolved">محلول</option><option value="rejected">مرفوض</option></select></div>
+    <div class="field" style="margin-bottom:1.25rem"><label class="field-label">الرد</label><textarea class="textarea" id="complaintReply" placeholder="اكتب ردك على الشكوى..."></textarea></div>
+    <div style="display:flex;gap:.65rem">
+      <button class="btn btn-primary" onclick="submitComplaintReply()">إرسال الرد</button>
+      <button class="btn btn-ghost" onclick="closeModal('replyComplaintModal')">إلغاء</button>
+    </div>
+    <div id="complaintReplyMsg" style="margin-top:.75rem;display:none"></div>
+  </div>
+</div>
+
+<script>
+// ===== SUPABASE =====
+const SB_URL = 'https://mckhttjxpflppzndoavy.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ja2h0dGp4cGZscHB6bmRvYXZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5NzE0NzMsImV4cCI6MjA5NDU0NzQ3M30.QkNaC1BdNItqiVpHsmQo4RD2xLy8xw6uCsaGB_zjotE';
+const SBH = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' };
+
+async function sb(table, params='') {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}${params}`, { headers: SBH });
+  return r.json();
+}
+async function sbPost(table, body) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}`, { method:'POST', headers:{...SBH,'Prefer':'return=representation'}, body:JSON.stringify(body) });
+  return r.json();
+}
+async function sbPatch(table, params, body) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}${params}`, { method:'PATCH', headers:{...SBH,'Prefer':'return=minimal'}, body:JSON.stringify(body) });
+  return r.ok;
+}
+
+// ===== STATE =====
+let currentAdmin = null;
+let allUsers = [], allAnalyses = [], allTickets = [], allPayments = [], allComplaints = [];
+let charts = {};
+let activeTicketId = null;
+let activeComplaintId = null;
+
+// ===== INIT =====
+window.addEventListener('DOMContentLoaded', async () => {
+  const stored = localStorage.getItem('ih_user');
+  if(!stored) { window.location.href='index.html'; return; }
+  currentAdmin = JSON.parse(stored);
+  if(currentAdmin.role === 'member') { window.location.href='user-dashboard.html'; return; }
+  document.getElementById('adminName').textContent = currentAdmin.full_name || 'مدير';
+  document.getElementById('adminRoleLbl').textContent = currentAdmin.role;
+  document.getElementById('adminInitial').textContent = (currentAdmin.full_name||'A').charAt(0);
+  await loadOverview();
+});
+
+// ===== ROUTING =====
+const pageTitles = {
+  overview:'نظرة عامة',analytics:'إحصائيات المنصة',users:'المستخدمون',
+  subscriptions:'الاشتراكات',payments:'المدفوعات','all-analyses':'جميع التحليلات',
+  'results-view':'نتائج التحليل',tickets:'تذاكر الدعم',complaints:'الشكاوى',
+  'plans-mgmt':'إدارة الخطط','notifications-mgmt':'إرسال إشعار',audit:'سجل التدقيق',settings:'الإعدادات'
+};
+
+async function goto(page, linkEl) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  if(linkEl) linkEl.classList.add('active');
+  else { const el = document.querySelector(`[data-page="${page}"]`); if(el) el.classList.add('active'); }
+  const pageEl = document.getElementById(`page-${page}`);
+  if(pageEl) pageEl.classList.add('active');
+  document.getElementById('pageTitle').textContent = pageTitles[page] || page;
+  document.getElementById('mainContent').scrollTop = 0;
+  if(page==='users') await loadUsers();
+  else if(page==='subscriptions') await loadSubscriptions();
+  else if(page==='payments') await loadPayments();
+  else if(page==='all-analyses') await loadAllAnalyses();
+  else if(page==='tickets') await loadTickets();
+  else if(page==='complaints') await loadComplaints();
+  else if(page==='plans-mgmt') await loadPlans();
+  else if(page==='audit') await loadAudit();
+  else if(page==='notifications-mgmt') await populateNotifRecipients();
+  else if(page==='analytics') drawAnalyticsCharts();
+}
+
+// ===== THEME =====
+document.getElementById('themeBtn').onclick = () => {
+  const r = document.documentElement;
+  r.setAttribute('data-theme', r.getAttribute('data-theme')==='dark'?'light':'dark');
+  setTimeout(()=>{ Object.values(charts).forEach(c=>c&&c.destroy&&c.destroy()); charts={}; loadOverviewCharts(); }, 100);
+};
+
+// ===== MOBILE MENU =====
+document.getElementById('menuToggle').onclick = () => document.getElementById('sidebar').classList.toggle('open');
+
+// ===== LOGOUT =====
+function logout() { localStorage.removeItem('ih_user'); window.location.href='index.html'; }
+
+// ===== OVERVIEW =====
+async function loadOverview() {
+  showLoader(true);
+  try {
+    const [users, analyses, payments, tickets] = await Promise.all([
+      sb('users','?select=id,role'),
+      sb('analysis_requests','?select=id,status,title,created_at&order=created_at.desc&limit=6'),
+      sb('payments','?select=amount,status'),
+      sb('support_tickets','?select=id,status&status=eq.open')
+    ]);
+
+    const totalUsers = users.length;
+    const completedAna = analyses.filter(a=>a.status==='completed').length;
+    const totalRevenue = payments.filter(p=>p.status==='completed').reduce((s,p)=>s+parseFloat(p.amount),0);
+    const openTickets = tickets.length;
+
+    document.getElementById('st-users').textContent = totalUsers;
+    document.getElementById('st-analyses').textContent = completedAna;
+    document.getElementById('st-revenue').textContent = '$'+totalRevenue.toLocaleString();
+    document.getElementById('st-tickets').textContent = openTickets;
+    document.getElementById('usersBadge').textContent = totalUsers;
+    if(openTickets > 0) { document.getElementById('ticketsBadge').textContent=openTickets; document.getElementById('ticketsBadge').style.display='inline-flex'; }
+
+    // Recent
+    const el = document.getElementById('recentAnalyses');
+    el.innerHTML = analyses.slice(0,5).map(a=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem .85rem;background:var(--surface2);border-radius:.85rem;gap:.5rem;cursor:pointer" onclick="viewAdminResult('${a.id}')">
+        <div style="font-size:.87rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.title}</div>
+        <span class="badge ${statusBadge(a.status)}">${statusLabel(a.status)}</span>
+      </div>`).join('');
+
+    allAnalyses = analyses;
+    loadOverviewCharts();
+  } catch(e){ console.error(e); }
+  showLoader(false);
+}
+
+function loadOverviewCharts() {
+  const style = getComputedStyle(document.documentElement);
+  const c = { text:style.getPropertyValue('--text').trim(), muted:style.getPropertyValue('--muted').trim(), primary:style.getPropertyValue('--primary').trim(), accent:style.getPropertyValue('--accent').trim(), success:style.getPropertyValue('--success').trim(), warning:style.getPropertyValue('--warning').trim(), error:style.getPropertyValue('--error').trim() };
+  const co = { responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:c.text,font:{family:'Cairo'}}}}, scales:{x:{ticks:{color:c.muted,font:{family:'Cairo'}},grid:{color:color_mix(c.muted,.05)}},y:{ticks:{color:c.muted,font:{family:'Cairo'}},grid:{color:color_mix(c.muted,.05)}}}};
+
+  const revCtx = document.getElementById('revenueChart');
+  if(revCtx){ if(charts.revenue) charts.revenue.destroy(); charts.revenue = new Chart(revCtx,{type:'bar',data:{labels:['Jan','Feb','Mar','Apr','May','Jun'],datasets:[{label:'الإيرادات ($)',data:[8200,9100,10400,11200,12100,12400],backgroundColor:c.primary,borderRadius:8}]},options:{...co,plugins:{legend:{display:false}}}}); }
+
+  const subsCtx = document.getElementById('subsChart');
+  if(subsCtx){ if(charts.subs) charts.subs.destroy(); charts.subs = new Chart(subsCtx,{type:'doughnut',data:{labels:['Starter','Pro','Enterprise'],datasets:[{data:[12,28,8],backgroundColor:[c.muted,c.primary,c.accent],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:c.text,font:{family:'Cairo'}}}}}}); }
+
+  const actCtx = document.getElementById('activityChart');
+  if(actCtx){ if(charts.activity) charts.activity.destroy(); charts.activity = new Chart(actCtx,{type:'line',data:{labels:['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'],datasets:[{label:'تحليلات جديدة',data:[5,8,6,12,9,11,7],borderColor:c.accent,tension:.35,fill:true,backgroundColor:c.accent+'18'}]},options:{...co}}); }
+}
+
+function drawAnalyticsCharts() {
+  const style = getComputedStyle(document.documentElement);
+  const c = { text:style.getPropertyValue('--text').trim(), muted:style.getPropertyValue('--muted').trim(), primary:style.getPropertyValue('--primary').trim(), accent:style.getPropertyValue('--accent').trim(), success:style.getPropertyValue('--success').trim(), warning:style.getPropertyValue('--warning').trim(), error:style.getPropertyValue('--error').trim() };
+  const co = { responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:c.text,font:{family:'Cairo'}}}},scales:{x:{ticks:{color:c.muted},grid:{display:false}},y:{ticks:{color:c.muted},grid:{color:c.muted+'22'}}}};
+  if(!charts.system){ const ctx=document.getElementById('systemChart'); if(ctx) charts.system=new Chart(ctx,{type:'bar',data:{labels:['CPU','RAM','Queue','DB','Storage'],datasets:[{label:'الاستخدام%',data:[62,71,44,83,55],backgroundColor:[c.primary,c.accent,c.success,c.warning,c.error],borderRadius:8}]},options:{...co,plugins:{legend:{display:false}}}}); }
+  if(!charts.platform){ const ctx=document.getElementById('platformChart'); if(ctx) charts.platform=new Chart(ctx,{type:'pie',data:{labels:['Twitter','Reddit','Meta','YouTube'],datasets:[{data:[52,24,15,9],backgroundColor:[c.primary,c.accent,c.success,c.warning],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:c.text,font:{family:'Cairo'}}}}}}); }
+  if(!charts.hourly){ const ctx=document.getElementById('hourlyChart'); if(ctx) charts.hourly=new Chart(ctx,{type:'line',data:{labels:['00','04','08','12','16','20','24'],datasets:[{label:'الطلبات',data:[8,14,22,38,44,31,18],borderColor:c.accent,fill:false,tension:.35}]},options:{...co}}); }
+}
+
+function color_mix(hex, alpha) { return hex+'33'; }
+
+// ===== USERS =====
+async function loadUsers() {
+  showLoader(true);
+  allUsers = await sb('users','?order=created_at.desc');
+  renderUsers(allUsers);
+  showLoader(false);
+}
+
+function renderUsers(users) {
+  const roles = {member:'عضو',moderator:'مشرف',admin:'مدير'};
+  document.getElementById('usersTableBody').innerHTML = users.map(u=>`
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:.7rem"><div style="width:34px;height:34px;border-radius:50%;background:var(--primary-light);display:grid;place-items:center;color:var(--primary);font-weight:800;font-size:.85rem;flex-shrink:0">${(u.full_name||'?').charAt(0)}</div><strong style="font-size:.9rem">${u.full_name||'—'}</strong></div></td>
+      <td style="font-size:.85rem;color:var(--muted)">${u.email}</td>
+      <td><span class="badge ${u.role==='admin'?'b-error':u.role==='moderator'?'b-primary':'b-muted'}">${roles[u.role]||u.role}</span></td>
+      <td><span class="badge ${u.is_active!==false?'b-success':'b-error'}">${u.is_active!==false?'نشط':'موقوف'}</span></td>
+      <td style="font-size:.82rem;color:var(--muted)">${fmtDate(u.created_at)}</td>
+      <td>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="toggleUserStatus('${u.id}',${u.is_active!==false})">${u.is_active!==false?'إيقاف':'تفعيل'}</button>
+          ${u.role!=='admin'?`<button class="btn btn-primary btn-sm" onclick="promoteUser('${u.id}','${u.role}')">ترقية</button>`:''}
+        </div>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="6"><div class="empty-state">لا يوجد مستخدمون</div></td></tr>';
+}
+
+function filterUsers() {
+  const role = document.getElementById('userRoleFilter').value;
+  renderUsers(role ? allUsers.filter(u=>u.role===role) : allUsers);
+}
+
+async function addUser() {
+  const name = document.getElementById('newUserName').value.trim();
+  const email = document.getElementById('newUserEmail').value.trim();
+  const role = document.getElementById('newUserRole').value;
+  const msg = document.getElementById('addUserMsg');
+  if(!name||!email) { showMsg(msg,'يرجى تعبئة جميع الحقول','error'); return; }
+  showLoader(true);
+  const res = await sbPost('users',{full_name:name,email,role});
+  showLoader(false);
+  if(res&&res[0]) {
+    await logAudit('CREATE_USER','user',res[0].id,{email,role});
+    showMsg(msg,'تم إضافة المستخدم بنجاح ✓','success');
+    await loadUsers();
+    setTimeout(()=>closeModal('addUserModal'),1500);
+  } else showMsg(msg,'البريد الإلكتروني مسجل مسبقاً أو حدث خطأ','error');
+}
+
+async function toggleUserStatus(id, isActive) {
+  showLoader(true);
+  await sbPatch('users',`?id=eq.${id}`,{is_active:!isActive});
+  await logAudit(isActive?'DEACTIVATE_USER':'ACTIVATE_USER','user',id,{});
+  await loadUsers();
+  showLoader(false);
+}
+
+async function promoteUser(id, currentRole) {
+  const next = currentRole==='member'?'moderator':'admin';
+  if(!confirm(`ترقية إلى ${next}؟`)) return;
+  showLoader(true);
+  await sbPatch('users',`?id=eq.${id}`,{role:next});
+  await logAudit('PROMOTE_USER','user',id,{from:currentRole,to:next});
+  await loadUsers();
+  showLoader(false);
+}
+
+// ===== SUBSCRIPTIONS =====
+async function loadSubscriptions() {
+  showLoader(true);
+  const subs = await sb('subscriptions','?select=*,user:user_id(full_name,email),plan:plan_id(name)&order=created_at.desc');
+  const statusMap = {active:'نشط',cancelled:'ملغى',expired:'منتهي',trial:'تجريبي'};
+  document.getElementById('subsTableBody').innerHTML = subs.map(s=>`
+    <tr>
+      <td><div style="font-size:.9rem;font-weight:700">${s.user?.full_name||'—'}</div><div style="font-size:.78rem;color:var(--muted)">${s.user?.email||''}</div></td>
+      <td><span class="badge b-primary">${s.plan?.name||'—'}</span></td>
+      <td><span class="muted" style="font-size:.85rem">${s.billing_cycle==='yearly'?'سنوي':'شهري'}</span></td>
+      <td><span class="badge ${s.status==='active'?'b-success':s.status==='cancelled'?'b-error':'b-muted'}">${statusMap[s.status]||s.status}</span></td>
+      <td style="font-size:.82rem;color:var(--muted)">${s.expires_at?fmtDate(s.expires_at):'—'}</td>
+      <td>${s.status==='active'?`<button class="btn btn-danger btn-sm" onclick="cancelSub('${s.id}')">إلغاء</button>`:'—'}</td>
+    </tr>`).join('') || '<tr><td colspan="6"><div class="empty-state">لا توجد اشتراكات</div></td></tr>';
+  showLoader(false);
+}
+
+async function cancelSub(id) {
+  if(!confirm('إلغاء هذا الاشتراك؟')) return;
+  showLoader(true);
+  await sbPatch('subscriptions',`?id=eq.${id}`,{status:'cancelled'});
+  await logAudit('CANCEL_SUBSCRIPTION','subscription',id,{});
+  await loadSubscriptions();
+  showLoader(false);
+}
+
+// ===== PAYMENTS =====
+async function loadPayments() {
+  showLoader(true);
+  allPayments = await sb('payments','?select=*,user:user_id(full_name,email)&order=paid_at.desc');
+  const total = allPayments.filter(p=>p.status==='completed').reduce((s,p)=>s+parseFloat(p.amount),0);
+  document.getElementById('paymentsTotalInfo').textContent = `إجمالي الإيرادات المكتملة: $${total.toLocaleString()}`;
+  renderPayments(allPayments);
+  showLoader(false);
+}
+
+function renderPayments(payments) {
+  const stMap = {completed:'مكتمل',pending:'معلق',failed:'فاشل',refunded:'مُسترد'};
+  document.getElementById('paymentsTableBody').innerHTML = payments.map(p=>`
+    <tr>
+      <td><div style="font-size:.88rem;font-weight:700">${p.user?.full_name||'—'}</div><div style="font-size:.76rem;color:var(--muted)">${p.user?.email||''}</div></td>
+      <td><strong>$${parseFloat(p.amount).toFixed(2)}</strong></td>
+      <td style="font-size:.84rem;color:var(--muted)">${p.currency||'USD'}</td>
+      <td><span class="badge ${p.status==='completed'?'b-success':p.status==='pending'?'b-warning':p.status==='refunded'?'b-accent':'b-error'}">${stMap[p.status]||p.status}</span></td>
+      <td style="font-size:.82rem;color:var(--muted)">${p.payment_method||'—'}</td>
+      <td style="font-size:.82rem;color:var(--muted)">${fmtDate(p.paid_at)}</td>
+      <td>${p.status==='pending'?`<button class="btn btn-success btn-sm" onclick="confirmPayment('${p.id}')">تأكيد</button>`:p.status==='completed'?`<button class="btn btn-danger btn-sm" onclick="refundPayment('${p.id}')">استرداد</button>`:'—'}</td>
+    </tr>`).join('') || '<tr><td colspan="7"><div class="empty-state">لا توجد مدفوعات</div></td></tr>';
+}
+
+function filterPayments() {
+  const st = document.getElementById('payStatusFilter').value;
+  renderPayments(st ? allPayments.filter(p=>p.status===st) : allPayments);
+}
+
+async function confirmPayment(id) {
+  showLoader(true);
+  await sbPatch('payments',`?id=eq.${id}`,{status:'completed'});
+  await logAudit('CONFIRM_PAYMENT','payment',id,{});
+  await loadPayments();
+  showLoader(false);
+}
+
+async function refundPayment(id) {
+  if(!confirm('استرداد هذه الدفعة؟')) return;
+  showLoader(true);
+  await sbPatch('payments',`?id=eq.${id}`,{status:'refunded'});
+  await logAudit('REFUND_PAYMENT','payment',id,{});
+  await loadPayments();
+  showLoader(false);
+}
+
+// ===== ALL ANALYSES =====
+async function loadAllAnalyses() {
+  showLoader(true);
+  allAnalyses = await sb('analysis_requests','?select=*,user:user_id(full_name)&order=created_at.desc');
+  renderAnalyses(allAnalyses);
+  showLoader(false);
+}
+
+function renderAnalyses(data) {
+  const typeLabels = {reputation:'السمعة',campaign:'الحملات',audience:'الجمهور',influencer:'المؤثرون',strategic:'استراتيجي'};
+  document.getElementById('allAnalysesBody').innerHTML = data.map(a=>`
+    <tr>
+      <td><strong style="font-size:.9rem">${a.title}</strong></td>
+      <td style="font-size:.83rem;color:var(--muted)">${a.user?.full_name||'—'}</td>
+      <td><span class="badge b-muted" style="font-size:.72rem">${typeLabels[a.analysis_type]||a.analysis_type}</span></td>
+      <td><span class="badge ${statusBadge(a.status)}">${statusLabel(a.status)}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:.4rem">
+          <div class="prog" style="width:70px"><span style="width:${a.progress}%"></span></div>
+          <span style="font-size:.76rem;color:var(--muted)">${a.progress}%</span>
+        </div>
+      </td>
+      <td style="font-size:.8rem;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(a.keywords||[]).join(', ')}</td>
+      <td>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+          ${a.status==='completed'?`<button class="btn btn-secondary btn-sm" onclick="viewAdminResult('${a.id}')">النتائج</button>`:''}
+          ${a.status==='pending'||a.status==='failed'?`<button class="btn btn-primary btn-sm" onclick="setAnalysisStatus('${a.id}','analyzing')">بدء</button>`:''}
+          ${a.status==='analyzing'?`<button class="btn btn-success btn-sm" onclick="setAnalysisStatus('${a.id}','completed')">إنهاء</button>`:''}
+        </div>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="7"><div class="empty-state">لا توجد تحليلات</div></td></tr>';
+}
+
+function filterAnalyses() {
+  const st = document.getElementById('analysisStatusFilter').value;
+  renderAnalyses(st ? allAnalyses.filter(a=>a.status===st) : allAnalyses);
+}
+
+async function setAnalysisStatus(id, status) {
+  showLoader(true);
+  const progress = status==='completed'?100:status==='analyzing'?50:0;
+  await sbPatch('analysis_requests',`?id=eq.${id}`,{status,progress,updated_at:new Date().toISOString(),...(status==='completed'?{completed_at:new Date().toISOString()}:{})});
+  await logAudit('UPDATE_ANALYSIS_STATUS','analysis_request',id,{status});
+  await loadAllAnalyses();
+  showLoader(false);
+}
+
+async function viewAdminResult(id) {
+  goto('results-view', null);
+  showLoader(true);
+  const [results, req] = await Promise.all([
+    sb('analysis_results',`?request_id=eq.${id}&select=*`),
+    sb('analysis_requests',`?id=eq.${id}&select=*`)
+  ]);
+  showLoader(false);
+  const r = results[0];
+  const q = req[0];
+  if(!r) { document.getElementById('adminResultContent').innerHTML='<div class="empty-state">لا توجد نتائج لهذا التحليل بعد.</div>'; return; }
+  const style = getComputedStyle(document.documentElement);
+  const sc = style.getPropertyValue('--success').trim();
+  const bc = style.getPropertyValue('--blue').trim();
+  const ec = style.getPropertyValue('--error').trim();
+  document.getElementById('adminResultContent').innerHTML = `
+    <div class="card" style="margin-bottom:1rem">
+      <div style="font-size:1.05rem;font-weight:900;margin-bottom:.25rem">${q?.title||'—'}</div>
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">الكلمات: ${(q?.keywords||[]).join(', ')}</div>
+      <div class="grid-4" style="margin-bottom:1rem">
+        <div class="stat-card"><div class="stat-label">إجمالي المنشورات</div><div class="stat-value">${(r.total_posts||0).toLocaleString()}</div></div>
+        <div class="stat-card"><div class="stat-label">المستخدمون</div><div class="stat-value">${(r.total_users||0).toLocaleString()}</div></div>
+        <div class="stat-card"><div class="stat-label">الوصول</div><div class="stat-value">${fmtNum(r.total_reach||0)}</div></div>
+        <div class="stat-card"><div class="stat-label">المشاعر الإيجابية</div><div class="stat-value" style="color:var(--success)">${r.sentiment_positive}%</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="chart-card"><div class="sec-title" style="margin-bottom:.75rem">توزيع المشاعر</div><div style="position:relative;height:200px;width:100%"><canvas id="adminSentPie"></canvas></div></div>
+        <div class="chart-card"><div class="sec-title" style="margin-bottom:.75rem">المشاعر عبر الزمن</div><div style="position:relative;height:200px;width:100%"><canvas id="adminSentLine"></canvas></div></div>
+      </div>
+      <div class="card" style="margin-top:1rem"><div class="sec-title" style="margin-bottom:.6rem">ملخص التحليل</div><p style="color:var(--muted);font-size:.9rem;line-height:1.8">${r.summary||'—'}</p></div>
+    </div>`;
+  setTimeout(()=>{
+    const pieCtx = document.getElementById('adminSentPie');
+    if(pieCtx) new Chart(pieCtx,{type:'doughnut',data:{labels:['إيجابي','محايد','سلبي'],datasets:[{data:[r.sentiment_positive,r.sentiment_neutral,r.sentiment_negative],backgroundColor:[sc,bc,ec],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:style.getPropertyValue('--text').trim(),font:{family:'Cairo'}}}}}});
+    const lineCtx = document.getElementById('adminSentLine');
+    if(lineCtx && r.sentiment_timeline?.length) new Chart(lineCtx,{type:'line',data:{labels:r.sentiment_timeline.map(t=>`يوم ${t.day}`),datasets:[{label:'إيجابي',data:r.sentiment_timeline.map(t=>t.positive),borderColor:sc,tension:.35,fill:false},{label:'سلبي',data:r.sentiment_timeline.map(t=>t.negative),borderColor:ec,tension:.35,fill:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:style.getPropertyValue('--text').trim(),font:{family:'Cairo'}}}},scales:{x:{ticks:{color:style.getPropertyValue('--muted').trim()}},y:{ticks:{color:style.getPropertyValue('--muted').trim()}}}}});
+  },100);
+}
+
+// ===== TICKETS =====
+async function loadTickets() {
+  showLoader(true);
+  allTickets = await sb('support_tickets','?select=*,user:user_id(full_name,email)&order=created_at.desc');
+  const open = allTickets.filter(t=>t.status==='open').length;
+  if(open>0){ document.getElementById('ticketsBadge').textContent=open; document.getElementById('ticketsBadge').style.display='inline-flex'; }
+  renderTickets(allTickets);
+  showLoader(false);
+}
+
+function renderTickets(tickets) {
+  const catMap = {technical:'تقني',billing:'فوترة',data_accuracy:'دقة بيانات',feature_request:'طلب ميزة',other:'أخرى'};
+  const prioMap = {low:'منخفض',medium:'متوسط',high:'عالي',urgent:'عاجل'};
+  const stMap = {open:'مفتوح',in_progress:'قيد المعالجة',resolved:'محلول',closed:'مغلق'};
+  document.getElementById('ticketsTableBody').innerHTML = tickets.map(t=>`
+    <tr>
+      <td><strong style="font-size:.88rem">${t.subject}</strong></td>
+      <td style="font-size:.82rem;color:var(--muted)">${t.user?.full_name||'—'}</td>
+      <td><span class="muted" style="font-size:.8rem">${catMap[t.category]||t.category}</span></td>
+      <td><span class="badge ${t.priority==='urgent'?'b-error':t.priority==='high'?'b-warning':'b-muted'}">${prioMap[t.priority]||t.priority}</span></td>
+      <td><span class="badge ${t.status==='open'?'b-blue':t.status==='in_progress'?'b-warning':t.status==='resolved'?'b-success':'b-muted'}">${stMap[t.status]||t.status}</span></td>
+      <td style="font-size:.8rem;color:var(--muted)">${fmtDate(t.created_at)}</td>
+      <td><button class="btn btn-primary btn-sm" onclick="openTicketReply('${t.id}','${escHtml(t.subject)}','${escHtml(t.description||'')}')">الرد</button></td>
+    </tr>`).join('') || '<tr><td colspan="7"><div class="empty-state">لا توجد تذاكر</div></td></tr>';
+}
+
+function filterTickets() {
+  const st = document.getElementById('ticketStatusFilter').value;
+  renderTickets(st ? allTickets.filter(t=>t.status===st) : allTickets);
+}
+
+function openTicketReply(id, subject, desc) {
+  activeTicketId = id;
+  document.getElementById('replyModalTitle').textContent = subject;
+  document.getElementById('replyModalBody').textContent = desc;
+  document.getElementById('replyText').value = '';
+  openModal('replyModal');
+}
+
+async function submitReply() {
+  const text = document.getElementById('replyText').value.trim();
+  const status = document.getElementById('replyStatus').value;
+  const msg = document.getElementById('replyMsg');
+  if(!text) { showMsg(msg,'يرجى كتابة الرد','error'); return; }
+  showLoader(true);
+  await sbPatch('support_tickets',`?id=eq.${activeTicketId}`,{admin_reply:text,status,updated_at:new Date().toISOString(),...(status==='resolved'?{resolved_at:new Date().toISOString()}:{})});
+  await logAudit('REPLY_TICKET','support_ticket',activeTicketId,{status});
+  showLoader(false);
+  showMsg(msg,'تم إرسال الرد ✓','success');
+  setTimeout(async()=>{ closeModal('replyModal'); await loadTickets(); },1200);
+}
+
+// ===== COMPLAINTS =====
+async function loadComplaints() {
+  showLoader(true);
+  allComplaints = await sb('complaints','?select=*,user:user_id(full_name,email)&order=created_at.desc');
+  const open = allComplaints.filter(c=>c.status==='open').length;
+  if(open>0){ document.getElementById('complaintsBadge').textContent=open; document.getElementById('complaintsBadge').style.display='inline-flex'; }
+  const catMap = {data_inaccuracy:'دقة بيانات',missing_data:'بيانات ناقصة',wrong_sentiment:'مشاعر خاطئة',billing_issue:'فوترة',other:'أخرى'};
+  document.getElementById('complaintsBody').innerHTML = allComplaints.map(c=>`
+    <tr>
+      <td><strong style="font-size:.88rem">${c.title}</strong></td>
+      <td style="font-size:.82rem;color:var(--muted)">${c.user?.full_name||'—'}</td>
+      <td><span class="muted" style="font-size:.8rem">${catMap[c.category]||c.category}</span></td>
+      <td><span class="badge ${c.status==='open'?'b-blue':c.status==='under_review'?'b-warning':c.status==='resolved'?'b-success':'b-error'}">${c.status==='open'?'مفتوح':c.status==='under_review'?'قيد المراجعة':c.status==='resolved'?'محلول':'مرفوض'}</span></td>
+      <td style="font-size:.8rem;color:var(--muted)">${fmtDate(c.created_at)}</td>
+      <td><button class="btn btn-primary btn-sm" onclick="openComplaintReply('${c.id}','${escHtml(c.title)}','${escHtml(c.description||'')}')">الرد</button></td>
+    </tr>`).join('') || '<tr><td colspan="6"><div class="empty-state">لا توجد شكاوى</div></td></tr>';
+  showLoader(false);
+}
+
+function openComplaintReply(id, title, desc) {
+  activeComplaintId = id;
+  document.getElementById('complaintModalBody').textContent = desc;
+  document.getElementById('complaintReply').value = '';
+  openModal('replyComplaintModal');
+}
+
+async function submitComplaintReply() {
+  const reply = document.getElementById('complaintReply').value.trim();
+  const status = document.getElementById('complaintStatus').value;
+  const msg = document.getElementById('complaintReplyMsg');
+  if(!reply) { showMsg(msg,'يرجى كتابة الرد','error'); return; }
+  showLoader(true);
+  await sbPatch('complaints',`?id=eq.${activeComplaintId}`,{admin_reply:reply,status,updated_at:new Date().toISOString()});
+  await logAudit('REPLY_COMPLAINT','complaint',activeComplaintId,{status});
+  showLoader(false);
+  showMsg(msg,'تم إرسال الرد ✓','success');
+  setTimeout(async()=>{ closeModal('replyComplaintModal'); await loadComplaints(); },1200);
+}
+
+// ===== PLANS =====
+async function loadPlans() {
+  showLoader(true);
+  const plans = await sb('plans','?order=price_monthly.asc');
+  document.getElementById('plansAdminGrid').innerHTML = plans.map(p=>`
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.75rem">
+        <div><div style="font-size:1.05rem;font-weight:900">${p.name}</div><div style="font-size:.82rem;color:var(--muted)">$${p.price_monthly}/شهر · $${p.price_yearly}/سنة</div></div>
+        <span class="badge ${p.is_active?'b-success':'b-muted'}">${p.is_active?'نشطة':'موقوفة'}</span>
+      </div>
+      <div style="display:grid;gap:.4rem;margin-bottom:1rem;font-size:.84rem;color:var(--muted)">
+        <div>• ${p.max_requests_per_month} طلب/شهر</div>
+        <div>• ${p.max_keywords} كلمات مفتاحية</div>
+        <div>• ${p.max_date_range_days} يوم نطاق زمني</div>
+        <div>• المنصات: ${p.platforms.join(', ')}</div>
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="togglePlan('${p.id}',${p.is_active})">${p.is_active?'إيقاف':'تفعيل'}</button>
+      </div>
+    </div>`).join('');
+  showLoader(false);
+}
+
+async function togglePlan(id, isActive) {
+  showLoader(true);
+  await sbPatch('plans',`?id=eq.${id}`,{is_active:!isActive});
+  await logAudit('TOGGLE_PLAN','plan',id,{is_active:!isActive});
+  await loadPlans();
+  showLoader(false);
+}
+
+// ===== NOTIFICATIONS =====
+async function populateNotifRecipients() {
+  const users = await sb('users','?select=id,full_name,email&role=eq.member');
+  const sel = document.getElementById('notifRecipient');
+  sel.innerHTML = '<option value="all">جميع المستخدمين</option>' + users.map(u=>`<option value="${u.id}">${u.full_name} (${u.email})</option>`).join('');
+}
+
+async function sendNotification() {
+  const recipient = document.getElementById('notifRecipient').value;
+  const type = document.getElementById('notifType').value;
+  const title = document.getElementById('notifTitle').value.trim();
+  const body = document.getElementById('notifBody').value.trim();
+  const msg = document.getElementById('notifMsg');
+  if(!title) { showMsg(msg,'يرجى إدخال عنوان الإشعار','error'); return; }
+  showLoader(true);
+  if(recipient === 'all') {
+    const users = await sb('users','?select=id&role=eq.member');
+    const notifs = users.map(u=>({user_id:u.id,type,title,body}));
+    for(const n of notifs) await sbPost('notifications',n);
+  } else {
+    await sbPost('notifications',{user_id:recipient,type,title,body});
+  }
+  await logAudit('SEND_NOTIFICATION','notifications',null,{recipient,type,title});
+  showLoader(false);
+  showMsg(msg,'تم إرسال الإشعار بنجاح ✓','success');
+  document.getElementById('notifTitle').value='';
+  document.getElementById('notifBody').value='';
+}
+
+// ===== AUDIT LOG =====
+async function loadAudit() {
+  showLoader(true);
+  const logs = await sb('audit_logs','?select=*,actor:actor_id(full_name)&order=created_at.desc&limit=50');
+  const actionClasses = {CREATE_USER:'info',PROMOTE_USER:'info',DEACTIVATE_USER:'warn',CANCEL_SUBSCRIPTION:'warn',REFUND_PAYMENT:'warn',REPLY_TICKET:'info',REPLY_COMPLAINT:'info',UPDATE_ANALYSIS_STATUS:'info',SEND_NOTIFICATION:'info',TOGGLE_PLAN:'warn'};
+  const actionLabels = {CREATE_USER:'إضافة مستخدم',PROMOTE_USER:'ترقية مستخدم',DEACTIVATE_USER:'إيقاف مستخدم',ACTIVATE_USER:'تفعيل مستخدم',CANCEL_SUBSCRIPTION:'إلغاء اشتراك',CONFIRM_PAYMENT:'تأكيد دفعة',REFUND_PAYMENT:'استرداد دفعة',REPLY_TICKET:'الرد على تذكرة',REPLY_COMPLAINT:'الرد على شكوى',UPDATE_ANALYSIS_STATUS:'تحديث حالة التحليل',SEND_NOTIFICATION:'إرسال إشعار',TOGGLE_PLAN:'تعديل خطة',CREATE_USER_SIGNUP:'تسجيل مستخدم جديد'};
+  document.getElementById('auditTimeline').innerHTML = logs.map(l=>`
+    <div class="audit-item ${actionClasses[l.action]||'info'}">
+      <div class="audit-time">${fmtTime(l.created_at)}</div>
+      <div>
+        <strong style="font-size:.9rem">${actionLabels[l.action]||l.action}</strong>
+        <div style="font-size:.8rem;color:var(--muted);margin-top:.15rem">بواسطة: ${l.actor?.full_name||l.actor_role||'النظام'} — ${fmtDate(l.created_at)}</div>
+        ${l.details&&Object.keys(l.details).length?`<div style="font-size:.78rem;color:var(--muted);font-family:monospace;margin-top:.2rem">${JSON.stringify(l.details)}</div>`:''}
+      </div>
+    </div>`).join('') || '<div class="empty-state">لا توجد سجلات</div>';
+  showLoader(false);
+}
+
+async function logAudit(action, entity_type, entity_id, details) {
+  try {
+    await sbPost('audit_logs',{actor_id:currentAdmin.id,actor_role:currentAdmin.role,action,entity_type,entity_id,details});
+  } catch(e) { console.warn('Audit log failed',e); }
+}
+
+// ===== MODALS =====
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+
+// ===== HELPERS =====
+function showLoader(s) { document.getElementById('loader').classList.toggle('show',s); }
+function statusBadge(s) { return s==='completed'?'b-success':s==='analyzing'||s==='collecting'?'b-blue':s==='failed'?'b-error':'b-muted'; }
+function statusLabel(s) { return {pending:'معلّق',collecting:'جمع البيانات',analyzing:'قيد التحليل',completed:'مكتمل',failed:'فاشل'}[s]||s; }
+function fmtDate(d) { if(!d) return '—'; return new Date(d).toLocaleDateString('ar-DZ',{year:'numeric',month:'short',day:'numeric'}); }
+function fmtTime(d) { if(!d) return '—'; return new Date(d).toLocaleTimeString('ar-DZ',{hour:'2-digit',minute:'2-digit'}); }
+function fmtNum(n) { if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1e3) return (n/1e3).toFixed(1)+'k'; return n; }
+function escHtml(s) { return (s||'').replace(/'/g,"&#39;").replace(/"/g,'&quot;'); }
+function showMsg(el, txt, type) {
+  if(!el) return;
+  el.innerHTML = `<div style="padding:.7rem 1rem;border-radius:.75rem;font-size:.86rem;background:color-mix(in srgb,var(--${type==='success'?'success':'error'}) 12%, transparent);color:var(--${type==='success'?'success':'error'});border:1px solid color-mix(in srgb,var(--${type==='success'?'success':'error'}) 25%, transparent)">${txt}</div>`;
+  el.style.display='block';
+  setTimeout(()=>{el.style.display='none';},4000);
+}
+</script>
+</body>
+</html>

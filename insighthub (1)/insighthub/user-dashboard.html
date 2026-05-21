@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>InsightHub — لوحة تحكم المستخدم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root,[data-theme="light"]{
+  --bg:#f4f2ee;--surface:#ffffff;--surface2:#faf9f7;--surface3:#f0ede8;
+  --text:#1e1c18;--muted:#6b675e;--border:#d8d4cc;
+  --primary:#01696f;--primary-dark:#014f54;--primary-light:#d8e8e7;
+  --accent:#c8612a;--accent-light:#fae8de;
+  --success:#437a22;--warning:#d19900;--error:#a12c7b;--blue:#006494;--purple:#7a39bb;
+  --shadow:0 8px 24px rgba(30,28,24,.08);--shadow-sm:0 2px 8px rgba(30,28,24,.05);
+  --radius:1rem;--radius2:1.25rem;
+}
+[data-theme="dark"]{
+  --bg:#13120f;--surface:#1a1916;--surface2:#201e1b;--surface3:#272420;
+  --text:#ede9df;--muted:#a09b91;--border:#333028;
+  --primary:#3d9098;--primary-dark:#2e7078;--primary-light:#1c3335;
+  --accent:#e07545;--accent-light:#3a2215;
+  --success:#7eba56;--warning:#efbe45;--error:#d46eae;--blue:#68a8dd;--purple:#b185e4;
+  --shadow:0 8px 24px rgba(0,0,0,.28);--shadow-sm:0 2px 8px rgba(0,0,0,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);height:100dvh;overflow:hidden}
+a{text-decoration:none;color:inherit}
+button,input,select,textarea{font:inherit;border:0}
+button{cursor:pointer}
+canvas{max-width:100%}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:right;padding:.75rem .9rem;border-bottom:1px solid color-mix(in srgb,var(--border) 70%, transparent)}
+th{font-size:.78rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+
+/* LAYOUT */
+.shell{display:grid;grid-template-columns:280px 1fr;height:100dvh}
+.sidebar{background:var(--surface);border-left:1px solid color-mix(in srgb,var(--border) 70%, transparent);padding:1.25rem;overflow-y:auto;display:flex;flex-direction:column;gap:.25rem}
+.main-area{display:grid;grid-template-rows:auto 1fr;overflow:hidden}
+.topbar{background:color-mix(in srgb,var(--bg) 88%, transparent);backdrop-filter:blur(12px);border-bottom:1px solid color-mix(in srgb,var(--border) 70%, transparent);padding:.9rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-shrink:0}
+.main{overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:1rem}
+
+/* SIDEBAR */
+.brand{display:flex;align-items:center;gap:.8rem;margin-bottom:1.5rem;padding:.25rem 0}
+.brand-mark{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--primary),#2ab5ad);display:grid;place-items:center;flex-shrink:0}
+.brand-name{font-size:1.05rem;font-weight:900}
+.brand-name span{color:var(--primary)}
+.nav-section-label{font-size:.73rem;font-weight:800;color:var(--muted);padding:.1rem .75rem;margin-top:.75rem;text-transform:uppercase;letter-spacing:.05em}
+.nav-link{display:flex;align-items:center;gap:.75rem;padding:.8rem .9rem;border-radius:.9rem;color:var(--muted);font-size:.9rem;font-weight:600;transition:.15s;position:relative}
+.nav-link:hover{background:var(--surface2);color:var(--text)}
+.nav-link.active{background:var(--primary-light);color:var(--primary)}
+.nav-link .nav-badge{margin-right:auto;font-size:.72rem;padding:.15rem .5rem;border-radius:999px;background:var(--primary);color:#fff;font-weight:800}
+.sidebar-user{margin-top:auto;padding-top:1rem;border-top:1px solid color-mix(in srgb,var(--border) 70%, transparent);display:flex;align-items:center;gap:.75rem}
+.user-avatar{width:38px;height:38px;border-radius:50%;background:var(--primary-light);display:grid;place-items:center;color:var(--primary);font-weight:800;font-size:.95rem;flex-shrink:0}
+.user-name{font-size:.88rem;font-weight:700}
+.user-role{font-size:.75rem;color:var(--muted)}
+
+/* TOPBAR */
+.page-title{font-size:1.2rem;font-weight:800}
+.topbar-actions{display:flex;align-items:center;gap:.6rem}
+.icon-btn{width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid color-mix(in srgb,var(--border) 80%, transparent);display:grid;place-items:center;color:var(--muted);transition:.15s}
+.icon-btn:hover{color:var(--text)}
+.notif-btn{position:relative}
+.notif-dot{position:absolute;top:7px;left:7px;width:8px;height:8px;border-radius:50%;background:var(--error);border:2px solid var(--bg)}
+
+/* PAGES */
+.page{display:none;animation:fadeUp .22s ease both}
+.page.active{display:contents}
+@keyframes fadeUp{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* CARDS */
+.card,.stat-card,.chart-card,.table-card{background:var(--surface);border:1px solid color-mix(in srgb,var(--border) 75%, transparent);border-radius:var(--radius2);box-shadow:var(--shadow-sm)}
+.card,.chart-card,.table-card{padding:1.25rem}
+.stat-card{padding:1.15rem}
+
+/* GRIDS */
+.grid-4,.grid-3,.grid-2{display:grid;gap:1rem}
+.grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.gap-top{margin-top:1rem}
+
+/* STATS */
+.stat-label{font-size:.8rem;color:var(--muted);margin-bottom:.35rem}
+.stat-value{font-size:1.75rem;font-weight:900;line-height:1.1}
+.stat-foot{font-size:.78rem;color:var(--muted);margin-top:.25rem}
+.stat-icon{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-size:1.15rem;margin-bottom:.65rem}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .7rem;border-radius:999px;font-size:.76rem;font-weight:800}
+.b-success{background:color-mix(in srgb,var(--success) 14%, transparent);color:var(--success)}
+.b-warning{background:color-mix(in srgb,var(--warning) 16%, transparent);color:#8d6b00}
+.b-error{background:color-mix(in srgb,var(--error) 14%, transparent);color:var(--error)}
+.b-blue{background:color-mix(in srgb,var(--blue) 12%, transparent);color:var(--blue)}
+.b-muted{background:color-mix(in srgb,var(--muted) 10%, transparent);color:var(--muted)}
+.b-primary{background:var(--primary-light);color:var(--primary)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;padding:.75rem 1.1rem;border-radius:.85rem;font-weight:700;font-size:.88rem;min-height:40px;transition:.18s}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-secondary{background:var(--primary-light);color:var(--primary)}
+.btn-ghost{background:transparent;border:1px solid color-mix(in srgb,var(--border) 85%, transparent);color:var(--text)}
+.btn-danger{background:color-mix(in srgb,var(--error) 12%, transparent);color:var(--error)}
+.btn-sm{padding:.55rem .85rem;font-size:.82rem;min-height:34px}
+
+/* PROGRESS */
+.progress-bar{height:8px;background:color-mix(in srgb,var(--border) 50%, transparent);border-radius:999px;overflow:hidden}
+.progress-bar>span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--primary),color-mix(in srgb,var(--primary) 60%, #2ab5ad))}
+
+/* FORM */
+.field{display:grid;gap:.35rem}
+.field-label{font-size:.85rem;font-weight:700}
+.input,.select,.textarea{width:100%;padding:.85rem 1rem;background:var(--surface2);border:1.5px solid color-mix(in srgb,var(--border) 80%, transparent);border-radius:.85rem;color:var(--text);outline:none;transition:.15s}
+.input:focus,.select:focus,.textarea:focus{border-color:var(--primary);background:var(--surface)}
+.textarea{min-height:100px;resize:vertical}
+.fields-row{display:grid;grid-template-columns:1fr 1fr;gap:.85rem}
+.field-hint{font-size:.78rem;color:var(--muted)}
+
+/* SECTION HEADER */
+.sec-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+.sec-title{font-size:1rem;font-weight:800}
+.muted{color:var(--muted)}
+
+/* NOTIFICATION ITEM */
+.notif-item{display:flex;gap:.85rem;padding:.9rem;border-radius:.9rem;background:var(--surface2)}
+.notif-item.unread{background:color-mix(in srgb,var(--blue) 7%, var(--surface2));border:1px solid color-mix(in srgb,var(--blue) 18%, transparent)}
+.notif-dot{width:9px;height:9px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:.4rem}
+.notif-dot.read{background:var(--border)}
+
+/* TABS */
+.tabs{display:flex;gap:.4rem;flex-wrap:wrap}
+.tab{padding:.55rem .9rem;border-radius:999px;background:var(--surface2);color:var(--muted);font-size:.85rem;font-weight:700;cursor:pointer;border:1px solid transparent;transition:.15s}
+.tab.active{background:var(--primary-light);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 20%, transparent)}
+
+/* ANALYSIS RESULT PANELS */
+.result-panel{display:none}.result-panel.active{display:block}
+
+/* NETWORK VIZ */
+.network-viz{min-height:280px;border-radius:1rem;background:radial-gradient(circle at 30% 30%, color-mix(in srgb,var(--blue) 14%, transparent), transparent 50%), var(--surface2);position:relative;overflow:hidden}
+.node{position:absolute;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-size:.72rem;font-weight:800;background:var(--surface);border:2px solid color-mix(in srgb,var(--border) 80%, transparent);box-shadow:var(--shadow-sm);text-align:center}
+.node-line{position:absolute;height:2px;background:color-mix(in srgb,var(--primary) 25%, transparent);transform-origin:right center}
+
+/* PLAN CARD */
+.plan-card{padding:1.25rem;border-radius:var(--radius2);border:1px solid color-mix(in srgb,var(--border) 80%, transparent);background:var(--surface)}
+.plan-card.current{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 4%, var(--surface))}
+.plan-name-big{font-size:1.2rem;font-weight:900;margin-bottom:.25rem}
+.plan-price-big{font-size:2rem;font-weight:900}
+.plan-price-big sup{font-size:.95rem;vertical-align:top;margin-top:.35rem}
+.plan-price-big span{font-size:.85rem;font-weight:500;color:var(--muted)}
+
+/* INFLUENCER CARD */
+.inf-card{display:flex;align-items:center;gap:.85rem;padding:.9rem;background:var(--surface2);border-radius:.9rem}
+.inf-avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:1rem;font-weight:800;flex-shrink:0}
+
+/* LOADING */
+.loading-overlay{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 85%, transparent);backdrop-filter:blur(4px);display:none;place-items:center;z-index:200;flex-direction:column;gap:.75rem}
+.loading-overlay.show{display:flex}
+.spinner{width:40px;height:40px;border-radius:50%;border:4px solid var(--border);border-top-color:var(--primary);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* SKELETON */
+.skeleton{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:skel 1.5s infinite;border-radius:.6rem;height:1.2rem}
+@keyframes skel{from{background-position:200% 0}to{background-position:-200% 0}}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:3rem;color:var(--muted)}
+.empty-state svg{margin:0 auto 1rem;opacity:.4}
+
+/* RESPONSIVE */
+@media(max-width:900px){.shell{grid-template-columns:1fr}.sidebar{display:none;position:fixed;inset-y:0;right:0;width:280px;z-index:50}.sidebar.open{display:flex}.grid-4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.grid-4,.grid-3,.grid-2{grid-template-columns:1fr}.fields-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loader"><div class="spinner"></div><div style="color:var(--muted);font-size:.88rem">جاري التحميل...</div></div>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
+      <div class="brand-name">Insight<span>Hub</span></div>
+    </div>
+
+    <div class="nav-section-label">الرئيسية</div>
+    <a class="nav-link active" data-page="overview" onclick="goto('overview',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      نظرة عامة
+    </a>
+    <a class="nav-link" data-page="new-analysis" onclick="goto('new-analysis',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+      طلب تحليل جديد
+    </a>
+    <a class="nav-link" data-page="my-analyses" onclick="goto('my-analyses',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      طلباتي
+      <span class="nav-badge" id="analysisBadge">0</span>
+    </a>
+
+    <div class="nav-section-label">الحساب</div>
+    <a class="nav-link" data-page="plans" onclick="goto('plans',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      الخطط والاشتراكات
+    </a>
+    <a class="nav-link" data-page="billing" onclick="goto('billing',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      الفواتير والمدفوعات
+    </a>
+    <div class="nav-section-label">الدعم</div>
+    <a class="nav-link" data-page="tickets" onclick="goto('tickets',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      تذاكر الدعم
+    </a>
+    <a class="nav-link" data-page="complaints" onclick="goto('complaints',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      شكاوى التحليل
+    </a>
+    <a class="nav-link" data-page="notifications" onclick="goto('notifications',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      الإشعارات
+      <span class="nav-badge" id="notifBadge" style="display:none">0</span>
+    </a>
+    <a class="nav-link" data-page="settings" onclick="goto('settings',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      الإعدادات
+    </a>
+
+    <div class="sidebar-user" id="sidebarUser">
+      <div class="user-avatar" id="userInitial">?</div>
+      <div>
+        <div class="user-name" id="userName">جاري التحميل...</div>
+        <div class="user-role" id="userEmail">—</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <div class="main-area">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <button class="icon-btn" id="menuToggle" style="display:none">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="page-title" id="pageTitle">نظرة عامة</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn notif-btn" onclick="goto('notifications',null)" title="الإشعارات">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-dot" id="notifIndicator" style="display:none"></span>
+        </button>
+        <button class="icon-btn" id="themeBtn" title="تبديل الثيم">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="logout()">خروج</button>
+      </div>
+    </header>
+
+    <main class="main" id="mainContent">
+
+      <!-- OVERVIEW PAGE -->
+      <section class="page active" id="page-overview">
+        <div class="grid-4" id="statsOverview">
+          <div class="stat-card"><div class="stat-icon" style="background:var(--primary-light);color:var(--primary)">📊</div><div class="stat-label">إجمالي التحليلات</div><div class="stat-value skeleton" style="width:60px;height:2rem"></div></div>
+          <div class="stat-card"><div class="stat-icon" style="background:color-mix(in srgb,var(--success) 14%, transparent);color:var(--success)">✅</div><div class="stat-label">مكتملة</div><div class="stat-value skeleton" style="width:40px;height:2rem"></div></div>
+          <div class="stat-card"><div class="stat-icon" style="background:color-mix(in srgb,var(--blue) 12%, transparent);color:var(--blue)">🔄</div><div class="stat-label">قيد التحليل</div><div class="stat-value skeleton" style="width:40px;height:2rem"></div></div>
+          <div class="stat-card"><div class="stat-icon" style="background:color-mix(in srgb,var(--warning) 14%, transparent);color:var(--warning)">⏳</div><div class="stat-label">معلّقة</div><div class="stat-value skeleton" style="width:40px;height:2rem"></div></div>
+        </div>
+        <div class="grid-2">
+          <div class="chart-card">
+            <div class="sec-head"><div class="sec-title">نشاط التحليلات الأسبوعي</div></div>
+            <div style="position:relative;height:200px;width:100%">
+              <canvas id="activityChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="sec-head"><div class="sec-title">آخر التحليلات</div><button class="btn btn-secondary btn-sm" onclick="goto('my-analyses',null)">عرض الكل</button></div>
+            <div id="recentList" style="display:grid;gap:.6rem"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="sec-head"><div class="sec-title">🚀 ابدأ تحليلاً جديداً</div></div>
+          <p class="muted" style="margin-bottom:1rem;font-size:.9rem">اكتشف ما يقوله جمهورك باستخدام الذكاء الاصطناعي — من تحليل المشاعر إلى اكتشاف المؤثرين.</p>
+          <button class="btn btn-primary" onclick="goto('new-analysis',null)">+ طلب تحليل جديد</button>
+        </div>
+      </section>
+
+      <!-- NEW ANALYSIS PAGE -->
+      <section class="page" id="page-new-analysis">
+        <div class="card" style="max-width:720px">
+          <div class="sec-head" style="margin-bottom:1.5rem"><div><div class="sec-title">طلب تحليل جديد</div><div class="muted" style="font-size:.85rem;margin-top:.2rem">سيتم جمع البيانات وتحليلها تلقائياً</div></div></div>
+          <div class="field" style="margin-bottom:1rem">
+            <label class="field-label">عنوان الطلب *</label>
+            <input type="text" class="input" id="anaTitle" placeholder="مثال: تحليل سمعة منتج X في الجزائر">
+          </div>
+          <div class="field" style="margin-bottom:1rem">
+            <label class="field-label">الكلمات المفتاحية *</label>
+            <input type="text" class="input" id="anaKeywords" placeholder="protein, كرياتين, algeria (افصل بفاصلة)">
+            <div class="field-hint">أدخل من 1 إلى 10 كلمات أو هاشتاغات مفصولة بفاصلة</div>
+          </div>
+          <div class="fields-row" style="margin-bottom:1rem">
+            <div class="field">
+              <label class="field-label">تاريخ البداية *</label>
+              <input type="date" class="input" id="anaFrom">
+            </div>
+            <div class="field">
+              <label class="field-label">تاريخ النهاية *</label>
+              <input type="date" class="input" id="anaTo">
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:1rem">
+            <label class="field-label">نوع التحليل *</label>
+            <select class="select" id="anaType">
+              <option value="reputation">تحليل السمعة الرقمية</option>
+              <option value="campaign">تحليل الحملات التسويقية</option>
+              <option value="audience">تحليل سلوك الجمهور</option>
+              <option value="influencer">اكتشاف المؤثرين</option>
+              <option value="strategic">التقرير الاستراتيجي الشامل</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:1.5rem">
+            <label class="field-label">المنصات</label>
+            <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.25rem" id="platformCheckboxes">
+              <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.88rem"><input type="checkbox" value="twitter" checked> Twitter / X</label>
+              <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.88rem"><input type="checkbox" value="reddit"> Reddit</label>
+              <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.88rem"><input type="checkbox" value="youtube"> YouTube</label>
+              <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.88rem"><input type="checkbox" value="meta"> Meta</label>
+            </div>
+          </div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="submitAnalysis()">إرسال الطلب</button>
+            <button class="btn btn-ghost" onclick="goto('my-analyses',null)">عرض طلباتي</button>
+          </div>
+          <div id="anaMsg" style="margin-top:.85rem;display:none"></div>
+        </div>
+      </section>
+
+      <!-- MY ANALYSES PAGE -->
+      <section class="page" id="page-my-analyses">
+        <div class="sec-head">
+          <div><div class="sec-title">طلبات التحليل</div><div class="muted" style="font-size:.85rem">جميع طلباتك التحليلية</div></div>
+          <button class="btn btn-primary btn-sm" onclick="goto('new-analysis',null)">+ طلب جديد</button>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>العنوان</th><th>النوع</th><th>الحالة</th><th>التقدم</th><th>التاريخ</th><th>الإجراء</th></tr></thead>
+              <tbody id="analysisTableBody"><tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--muted)"><div class="spinner" style="margin:0 auto"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ANALYSIS DETAILS PAGE -->
+      <section class="page" id="page-analysis-details">
+        <div class="sec-head">
+          <div><div class="sec-title" id="detailTitle">نتائج التحليل</div><div class="muted" style="font-size:.85rem" id="detailMeta">—</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="goto('my-analyses',null)">← العودة</button>
+        </div>
+        <div class="tabs" id="resultTabs" style="margin-bottom:1rem">
+          <div class="tab active" onclick="showResultPanel('overview')">نظرة عامة</div>
+          <div class="tab" onclick="showResultPanel('sentiment')">المشاعر</div>
+          <div class="tab" onclick="showResultPanel('topics')">المواضيع</div>
+          <div class="tab" onclick="showResultPanel('influencers')">المؤثرون</div>
+          <div class="tab" onclick="showResultPanel('network')">الشبكة</div>
+          <div class="tab" onclick="showResultPanel('recommendations')">التوصيات</div>
+        </div>
+        <!-- OVERVIEW PANEL -->
+        <div class="result-panel active" id="rp-overview">
+          <div class="grid-4" id="detailStats" style="margin-bottom:1rem"></div>
+          <div class="card" id="detailSummary"></div>
+        </div>
+        <!-- SENTIMENT PANEL -->
+        <div class="result-panel" id="rp-sentiment">
+          <div class="grid-2">
+            <div class="chart-card"><div class="sec-title" style="margin-bottom:.75rem">توزيع المشاعر</div><div style="position:relative;height:240px;width:100%"><canvas id="sentPie"></canvas></div></div>
+            <div class="chart-card"><div class="sec-title" style="margin-bottom:.75rem">المشاعر عبر الزمن</div><div style="position:relative;height:240px;width:100%"><canvas id="sentLine"></canvas></div></div>
+          </div>
+        </div>
+        <!-- TOPICS PANEL -->
+        <div class="result-panel" id="rp-topics">
+          <div class="chart-card"><div class="sec-title" style="margin-bottom:.75rem">أوزان المواضيع</div><div style="position:relative;height:240px;width:100%"><canvas id="topicBar"></canvas></div></div>
+        </div>
+        <!-- INFLUENCERS PANEL -->
+        <div class="result-panel" id="rp-influencers">
+          <div class="card"><div class="sec-title" style="margin-bottom:.9rem">أبرز المؤثرين</div><div id="infList" style="display:grid;gap:.75rem"></div></div>
+        </div>
+        <!-- NETWORK PANEL -->
+        <div class="result-panel" id="rp-network">
+          <div class="card"><div class="sec-title" style="margin-bottom:.75rem">خريطة الشبكة الاجتماعية</div><div class="network-viz" id="networkViz"></div></div>
+        </div>
+        <!-- RECOMMENDATIONS PANEL -->
+        <div class="result-panel" id="rp-recommendations">
+          <div class="card" id="recsList"></div>
+        </div>
+      </section>
+
+      <!-- PLANS PAGE -->
+      <section class="page" id="page-plans">
+        <div class="sec-head"><div class="sec-title">خطط الاشتراك</div></div>
+        <div class="grid-3" id="plansGrid"></div>
+      </section>
+
+      <!-- BILLING PAGE -->
+      <section class="page" id="page-billing">
+        <div class="sec-head"><div class="sec-title">الفواتير والمدفوعات</div></div>
+        <div class="grid-2">
+          <div class="card"><div class="sec-title" style="margin-bottom:.85rem">الاشتراك الحالي</div><div id="currentSubInfo">جاري التحميل...</div></div>
+          <div class="table-card">
+            <div class="sec-title" style="margin-bottom:.85rem">سجل الدفعات</div>
+            <div style="overflow-x:auto"><table><thead><tr><th>المبلغ</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody id="paymentsTable"></tbody></table></div>
+          </div>
+        </div>
+      </section>
+
+
+
+      <!-- TICKETS PAGE -->
+      <section class="page" id="page-tickets">
+        <div class="sec-head">
+          <div><div class="sec-title">تذاكر الدعم الفني</div></div>
+          <button class="btn btn-primary btn-sm" onclick="showTicketForm()">+ تذكرة جديدة</button>
+        </div>
+        <div id="ticketForm" class="card" style="display:none;margin-bottom:1rem">
+          <div class="sec-title" style="margin-bottom:1rem">تذكرة دعم جديدة</div>
+          <div class="field" style="margin-bottom:.85rem"><label class="field-label">الموضوع</label><input class="input" id="ticketSubject" placeholder="وصف مختصر للمشكلة"></div>
+          <div class="field" style="margin-bottom:.85rem"><label class="field-label">التصنيف</label><select class="select" id="ticketCat"><option value="technical">مشكلة تقنية</option><option value="billing">فوترة ودفع</option><option value="data_accuracy">دقة البيانات</option><option value="feature_request">طلب ميزة</option><option value="other">أخرى</option></select></div>
+          <div class="field" style="margin-bottom:1rem"><label class="field-label">التفاصيل</label><textarea class="textarea" id="ticketDesc" placeholder="اشرح المشكلة بالتفصيل..."></textarea></div>
+          <div style="display:flex;gap:.6rem"><button class="btn btn-primary" onclick="submitTicket()">إرسال</button><button class="btn btn-ghost" onclick="document.getElementById('ticketForm').style.display='none'">إلغاء</button></div>
+          <div id="ticketMsg" style="margin-top:.75rem;display:none"></div>
+        </div>
+        <div class="table-card"><div style="overflow-x:auto"><table><thead><tr><th>الموضوع</th><th>التصنيف</th><th>الأولوية</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody id="ticketsTable"></tbody></table></div></div>
+      </section>
+
+      <!-- COMPLAINTS PAGE -->
+      <section class="page" id="page-complaints">
+        <div class="sec-head"><div class="sec-title">شكاوى التحليل</div></div>
+        <div class="table-card"><div style="overflow-x:auto"><table><thead><tr><th>العنوان</th><th>التصنيف</th><th>الحالة</th><th>رد الإدارة</th><th>التاريخ</th></tr></thead><tbody id="complaintsTable"></tbody></table></div></div>
+      </section>
+
+      <!-- NOTIFICATIONS PAGE -->
+      <section class="page" id="page-notifications">
+        <div class="sec-head">
+          <div class="sec-title">الإشعارات</div>
+          <button class="btn btn-secondary btn-sm" onclick="markAllRead()">تحديد الكل كمقروء</button>
+        </div>
+        <div style="display:grid;gap:.6rem" id="notifList"></div>
+      </section>
+
+      <!-- SETTINGS PAGE -->
+      <section class="page" id="page-settings">
+        <div class="sec-head"><div class="sec-title">إعدادات الحساب</div></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="sec-title" style="margin-bottom:1rem">المعلومات الشخصية</div>
+            <div class="field" style="margin-bottom:.85rem"><label class="field-label">الاسم الكامل</label><input class="input" id="settingName"></div>
+            <div class="field" style="margin-bottom:1.25rem"><label class="field-label">البريد الإلكتروني</label><input class="input" id="settingEmail" type="email"></div>
+            <button class="btn btn-primary" onclick="saveProfile()">حفظ التغييرات</button>
+            <div id="settingMsg" style="margin-top:.75rem;display:none"></div>
+          </div>
+          <div class="card">
+            <div class="sec-title" style="margin-bottom:.85rem">معلومات الحساب</div>
+            <div style="display:grid;gap:.65rem">
+              <div style="display:flex;justify-content:space-between;padding:.75rem;background:var(--surface2);border-radius:.75rem">
+                <span class="muted" style="font-size:.88rem">رقم المستخدم</span>
+                <span style="font-size:.82rem;font-family:monospace" id="settingUserId">—</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:.75rem;background:var(--surface2);border-radius:.75rem">
+                <span class="muted" style="font-size:.88rem">الدور</span>
+                <span id="settingRole" class="badge b-primary">—</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:.75rem;background:var(--surface2);border-radius:.75rem">
+                <span class="muted" style="font-size:.88rem">تاريخ الإنشاء</span>
+                <span id="settingCreated" style="font-size:.88rem">—</span>
+              </div>
+            </div>
+            <div style="margin-top:1rem;padding:.9rem;background:color-mix(in srgb,var(--error) 8%, transparent);border:1px solid color-mix(in srgb,var(--error) 20%, transparent);border-radius:.85rem">
+              <div style="font-size:.88rem;font-weight:700;color:var(--error);margin-bottom:.4rem">منطقة الخطر</div>
+              <button class="btn btn-danger btn-sm" onclick="logout()">تسجيل الخروج</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script>
+// ===== SUPABASE =====
+const SB_URL = 'https://mckhttjxpflppzndoavy.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ja2h0dGp4cGZscHB6bmRvYXZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5NzE0NzMsImV4cCI6MjA5NDU0NzQ3M30.QkNaC1BdNItqiVpHsmQo4RD2xLy8xw6uCsaGB_zjotE';
+const SB_HEADERS = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' };
+
+async function sb(table, params='') {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}${params}`, { headers: SB_HEADERS });
+  return r.json();
+}
+async function sbPost(table, body) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}`, { method:'POST', headers:{...SB_HEADERS,'Prefer':'return=representation'}, body: JSON.stringify(body) });
+  return r.json();
+}
+async function sbPatch(table, params, body) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}${params}`, { method:'PATCH', headers:{...SB_HEADERS,'Prefer':'return=representation'}, body: JSON.stringify(body) });
+  return r.json();
+}
+
+// ===== STATE =====
+let currentUser = null;
+let analyses = [];
+let activeResult = null;
+let charts = {};
+
+// ===== INIT =====
+window.addEventListener('DOMContentLoaded', async () => {
+  const stored = localStorage.getItem('ih_user');
+  if(!stored) { window.location.href='index.html'; return; }
+  currentUser = JSON.parse(stored);
+  if(currentUser.role === 'admin' || currentUser.role === 'moderator') { window.location.href='admin-dashboard.html'; return; }
+
+  // Set user info
+  document.getElementById('userName').textContent = currentUser.full_name || 'مستخدم';
+  document.getElementById('userEmail').textContent = currentUser.email || '';
+  const initials = (currentUser.full_name||'U').charAt(0);
+  document.getElementById('userInitial').textContent = initials;
+
+  // Load overview
+  await loadOverview();
+  await loadNotifications();
+});
+
+// ===== ROUTING =====
+const pageTitles = {
+  'overview':'نظرة عامة','new-analysis':'طلب تحليل جديد','my-analyses':'طلباتي',
+  'plans':'الخطط','billing':'الفواتير',
+  'tickets':'الدعم الفني','complaints':'الشكاوى','notifications':'الإشعارات','settings':'الإعدادات',
+  'analysis-details':'نتائج التحليل'
+};
+
+async function goto(page, linkEl) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  if(linkEl) linkEl.classList.add('active');
+  else { const el = document.querySelector(`[data-page="${page}"]`); if(el) el.classList.add('active'); }
+  const pageEl = document.getElementById(`page-${page}`);
+  if(pageEl) pageEl.classList.add('active');
+  document.getElementById('pageTitle').textContent = pageTitles[page] || page;
+  document.getElementById('mainContent').scrollTop = 0;
+  if(page==='my-analyses') await loadAnalyses();
+  else if(page==='plans') await loadPlans();
+  else if(page==='billing') await loadBilling();
+  else if(page==='tickets') await loadTickets();
+  else if(page==='complaints') await loadComplaints();
+  else if(page==='settings') loadSettings();
+}
+
+// ===== THEME =====
+document.getElementById('themeBtn').onclick = () => {
+  const r = document.documentElement;
+  r.setAttribute('data-theme', r.getAttribute('data-theme')==='dark'?'light':'dark');
+  setTimeout(() => { Object.values(charts).forEach(c => c && c.destroy && c.destroy()); charts = {}; if(activeResult) drawResultCharts(activeResult); }, 100);
+};
+
+// ===== LOGOUT =====
+function logout() { localStorage.removeItem('ih_user'); window.location.href='index.html'; }
+
+// ===== MOBILE MENU =====
+document.getElementById('menuToggle').onclick = () => document.getElementById('sidebar').classList.toggle('open');
+
+// ===== OVERVIEW =====
+async function loadOverview() {
+  showLoader(true);
+  try {
+    const data = await sb('analysis_requests', `?user_id=eq.${currentUser.id}&select=id,status,title,created_at&order=created_at.desc`);
+    const total = data.length;
+    const completed = data.filter(d=>d.status==='completed').length;
+    const analyzing = data.filter(d=>d.status==='analyzing'||d.status==='collecting').length;
+    const pending = data.filter(d=>d.status==='pending').length;
+    document.getElementById('analysisBadge').textContent = total;
+
+    const statsEl = document.getElementById('statsOverview');
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-icon" style="background:var(--primary-light);color:var(--primary)">📊</div><div class="stat-label">إجمالي التحليلات</div><div class="stat-value">${total}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:color-mix(in srgb,var(--success) 14%, transparent);color:var(--success)">✅</div><div class="stat-label">مكتملة</div><div class="stat-value">${completed}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:color-mix(in srgb,var(--blue) 12%, transparent);color:var(--blue)">🔄</div><div class="stat-label">قيد التحليل</div><div class="stat-value">${analyzing}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:color-mix(in srgb,var(--warning) 14%, transparent);color:var(--warning)">⏳</div><div class="stat-label">معلّقة</div><div class="stat-value">${pending}</div></div>
+    `;
+
+    // Recent list
+    const recent = data.slice(0,4);
+    const listEl = document.getElementById('recentList');
+    listEl.innerHTML = recent.length ? recent.map(r=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:.75rem;background:var(--surface2);border-radius:.85rem;gap:.5rem;cursor:pointer" onclick="openResult('${r.id}')">
+        <div style="font-size:.88rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.title}</div>
+        <span class="badge ${statusBadge(r.status)}">${statusLabel(r.status)}</span>
+      </div>`) .join('') : '<div class="empty-state">لا توجد تحليلات بعد</div>';
+
+    // Activity chart
+    drawActivityChart(data);
+    analyses = data;
+  } catch(e){ console.error(e); }
+  showLoader(false);
+}
+
+function drawActivityChart(data) {
+  const ctx = document.getElementById('activityChart');
+  if(!ctx) return;
+  if(charts.activity) { charts.activity.destroy(); charts.activity = null; }
+  const days = ['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
+  const style = getComputedStyle(document.documentElement);
+  charts.activity = new Chart(ctx, {
+    type:'bar',
+    data:{ labels:days, datasets:[{label:'التحليلات',data:[2,3,1,4,2,3,2],backgroundColor:style.getPropertyValue('--primary').trim()||'#01696f',borderRadius:8}]},
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      animation:{duration:600},
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:style.getPropertyValue('--muted').trim(),font:{family:'Cairo'}}},
+        y:{ticks:{color:style.getPropertyValue('--muted').trim(),font:{family:'Cairo'}},beginAtZero:true}
+      }
+    }
+  });
+}
+
+// ===== ANALYSES =====
+async function loadAnalyses() {
+  showLoader(true);
+  const data = await sb('analysis_requests', `?user_id=eq.${currentUser.id}&order=created_at.desc`);
+  analyses = data;
+  const tbody = document.getElementById('analysisTableBody');
+  if(!data.length) { tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">لا توجد طلبات تحليل حتى الآن.<br><button class="btn btn-primary btn-sm" style="margin-top:.75rem" onclick="goto(\'new-analysis\',null)">ابدأ أول تحليل</button></div></td></tr>'; showLoader(false); return; }
+  tbody.innerHTML = data.map(r=>`
+    <tr>
+      <td><strong style="font-size:.9rem">${r.title}</strong></td>
+      <td><span class="muted" style="font-size:.82rem">${typeLabel(r.analysis_type)}</span></td>
+      <td><span class="badge ${statusBadge(r.status)}">${statusLabel(r.status)}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div class="progress-bar" style="width:80px"><span style="width:${r.progress}%"></span></div>
+          <span style="font-size:.78rem;color:var(--muted)">${r.progress}%</span>
+        </div>
+      </td>
+      <td><span class="muted" style="font-size:.82rem">${fmtDate(r.created_at)}</span></td>
+      <td>${r.status==='completed' ? `<button class="btn btn-secondary btn-sm" onclick="openResult('${r.id}')">عرض النتائج</button>` : `<button class="btn btn-ghost btn-sm" disabled>في الانتظار</button>`}</td>
+    </tr>`).join('');
+  showLoader(false);
+}
+
+async function openResult(id) {
+  showLoader(true);
+  const results = await sb('analysis_results', `?request_id=eq.${id}&select=*`);
+  const req = await sb('analysis_requests', `?id=eq.${id}&select=*`);
+  showLoader(false);
+  if(!results || !results.length) { alert('النتائج غير متاحة بعد'); return; }
+  activeResult = { ...results[0], request: req[0] };
+  goto('analysis-details', null);
+  document.getElementById('detailTitle').textContent = req[0]?.title || 'نتائج التحليل';
+  document.getElementById('detailMeta').textContent = `${req[0]?.keywords?.join(', ')} — ${fmtDate(req[0]?.created_at)}`;
+
+  // Stats
+  const r = activeResult;
+  document.getElementById('detailStats').innerHTML = `
+    <div class="stat-card"><div class="stat-label">إجمالي المنشورات</div><div class="stat-value">${(r.total_posts||0).toLocaleString()}</div></div>
+    <div class="stat-card"><div class="stat-label">المستخدمون</div><div class="stat-value">${(r.total_users||0).toLocaleString()}</div></div>
+    <div class="stat-card"><div class="stat-label">الوصول الكلي</div><div class="stat-value">${fmtNum(r.total_reach||0)}</div></div>
+    <div class="stat-card"><div class="stat-label">إيجابية</div><div class="stat-value" style="color:var(--success)">${r.sentiment_positive}%</div></div>
+  `;
+  document.getElementById('detailSummary').innerHTML = `<div class="sec-title" style="margin-bottom:.75rem">ملخص التحليل</div><p style="color:var(--muted);line-height:1.8;font-size:.92rem">${r.summary||'لا يوجد ملخص'}</p>`;
+  showResultPanel('overview');
+  drawResultCharts(r);
+  renderInfluencers(r.top_influencers||[]);
+  renderNetwork(r.network_nodes||[],r.network_edges||[]);
+  renderRecommendations(r.recommendations||[]);
+}
+
+function showResultPanel(panel) {
+  document.querySelectorAll('.result-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('#resultTabs .tab').forEach((t,i)=>{
+    const panels = ['overview','sentiment','topics','influencers','network','recommendations'];
+    t.classList.toggle('active', panels[i]===panel);
+  });
+  const el = document.getElementById(`rp-${panel}`);
+  if(el) el.classList.add('active');
+}
+
+function drawResultCharts(r) {
+  const style = getComputedStyle(document.documentElement);
+  const c = { text:style.getPropertyValue('--text').trim(), muted:style.getPropertyValue('--muted').trim(), success:style.getPropertyValue('--success').trim(), error:style.getPropertyValue('--error').trim(), blue:style.getPropertyValue('--blue').trim(), warning:style.getPropertyValue('--warning').trim(), primary:style.getPropertyValue('--primary').trim() };
+  // Sentiment pie
+  const sentCtx = document.getElementById('sentPie');
+  if(sentCtx) { if(charts.sentPie) charts.sentPie.destroy(); charts.sentPie = new Chart(sentCtx, { type:'doughnut', data:{ labels:['إيجابي','محايد','سلبي'], datasets:[{data:[r.sentiment_positive,r.sentiment_neutral,r.sentiment_negative],backgroundColor:[c.success,c.blue,c.error],borderWidth:0}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:c.text,font:{family:'Cairo'}}}}}}); }
+  // Sentiment line
+  const lineCtx = document.getElementById('sentLine');
+  if(lineCtx && r.sentiment_timeline && r.sentiment_timeline.length) {
+    if(charts.sentLine) charts.sentLine.destroy();
+    const tl = r.sentiment_timeline;
+    charts.sentLine = new Chart(lineCtx, { type:'line', data:{ labels:tl.map(t=>`يوم ${t.day}`), datasets:[{label:'إيجابي',data:tl.map(t=>t.positive),borderColor:c.success,tension:.35,fill:false},{label:'سلبي',data:tl.map(t=>t.negative),borderColor:c.error,tension:.35,fill:false}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:c.text,font:{family:'Cairo'}}}},scales:{x:{ticks:{color:c.muted}},y:{ticks:{color:c.muted}}}}});
+  }
+  // Topics bar
+  const topicCtx = document.getElementById('topicBar');
+  if(topicCtx && r.top_topics && r.top_topics.length) {
+    if(charts.topic) charts.topic.destroy();
+    charts.topic = new Chart(topicCtx, { type:'bar', data:{ labels:r.top_topics.map(t=>t.label), datasets:[{label:'الوزن',data:r.top_topics.map(t=>t.weight),backgroundColor:[c.warning,c.primary,c.blue,c.error,c.success],borderRadius:8}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:c.muted,font:{family:'Cairo'}}},y:{ticks:{color:c.muted}}}}});
+  }
+}
+
+function renderInfluencers(infs) {
+  const colors = ['#01696f','#c8612a','#006494','#7a39bb','#437a22'];
+  document.getElementById('infList').innerHTML = infs.map((inf,i)=>`
+    <div class="inf-card">
+      <div class="inf-avatar" style="background:${colors[i%colors.length]}22;color:${colors[i%colors.length]}">${inf.handle?.charAt(1)?.toUpperCase()||'?'}</div>
+      <div style="flex:1">
+        <div style="font-weight:800;font-size:.92rem">${inf.handle}</div>
+        <div style="font-size:.8rem;color:var(--muted)">${(inf.followers||0).toLocaleString()} متابع</div>
+      </div>
+      <div style="text-align:left">
+        <div style="font-size:.8rem;color:var(--muted)">قوة التأثير</div>
+        <div style="font-weight:900;color:var(--primary)">${((inf.influence||0)*100).toFixed(0)}%</div>
+      </div>
+    </div>`).join('') || '<div class="empty-state">لا توجد بيانات</div>';
+}
+
+function renderNetwork(nodes, edges) {
+  const viz = document.getElementById('networkViz');
+  const colors = ['#01696f','#c8612a','#006494','#7a39bb','#437a22'];
+  const positions = [{top:40,right:20},{top:40,right:200},{top:140,right:110},{top:230,right:50},{top:200,right:240}];
+  viz.innerHTML = (nodes.length ? nodes : [{label:'@node1'},{label:'@node2'},{label:'@node3'}]).map((n,i)=>{
+    const pos = positions[i%positions.length];
+    return `<div class="node" style="top:${pos.top}px;right:${pos.right}px;border-color:${colors[i%colors.length]}44">${n.handle||n.label||'?'}</div>`;
+  }).join('');
+}
+
+function renderRecommendations(recs) {
+  document.getElementById('recsList').innerHTML = `<div class="sec-title" style="margin-bottom:1rem">التوصيات الاستراتيجية</div>` + (recs.length ? recs.map((r,i)=>`
+    <div style="display:flex;gap:.85rem;padding:.9rem;background:var(--surface2);border-radius:.9rem;margin-bottom:.6rem">
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:grid;place-items:center;font-weight:800;font-size:.85rem;flex-shrink:0">${i+1}</div>
+      <div style="font-size:.9rem;color:var(--text)">${r}</div>
+    </div>`).join('') : '<div class="empty-state">لا توجد توصيات</div>');
+}
+
+// ===== SUBMIT ANALYSIS =====
+async function submitAnalysis() {
+  const title = document.getElementById('anaTitle').value.trim();
+  const keywordsRaw = document.getElementById('anaKeywords').value.trim();
+  const dateFrom = document.getElementById('anaFrom').value;
+  const dateTo = document.getElementById('anaTo').value;
+  const type = document.getElementById('anaType').value;
+  const platforms = [...document.querySelectorAll('#platformCheckboxes input:checked')].map(c=>c.value);
+  const msgEl = document.getElementById('anaMsg');
+
+  if(!title||!keywordsRaw||!dateFrom||!dateTo) { showMsg(msgEl,'يرجى تعبئة جميع الحقول المطلوبة','error'); return; }
+  const keywords = keywordsRaw.split(',').map(k=>k.trim()).filter(Boolean);
+  if(!keywords.length) { showMsg(msgEl,'أدخل كلمة مفتاحية واحدة على الأقل','error'); return; }
+
+  showLoader(true);
+  const res = await sbPost('analysis_requests', { user_id:currentUser.id, title, keywords, platforms:platforms.length?platforms:['twitter'], analysis_type:type, date_from:dateFrom, date_to:dateTo, status:'pending', progress:0 });
+  showLoader(false);
+  if(res && res[0]) {
+    showMsg(msgEl,'تم إرسال الطلب بنجاح! سيبدأ التحليل قريباً ✓','success');
+    document.getElementById('anaTitle').value='';
+    document.getElementById('anaKeywords').value='';
+    document.getElementById('anaFrom').value='';
+    document.getElementById('anaTo').value='';
+  } else { showMsg(msgEl,'حدث خطأ، حاول مرة أخرى','error'); }
+}
+
+// ===== PLANS =====
+async function loadPlans() {
+  showLoader(true);
+  const plans = await sb('plans', '?is_active=eq.true&order=price_monthly.asc');
+  const subs = await sb('subscriptions', `?user_id=eq.${currentUser.id}&status=eq.active&select=*,plan:plan_id(*)`);
+  const currentPlanId = subs[0]?.plan_id;
+  document.getElementById('plansGrid').innerHTML = plans.map(p=>`
+    <div class="plan-card ${p.id===currentPlanId?'current':''}">
+      ${p.id===currentPlanId?'<div style="font-size:.78rem;font-weight:800;color:var(--primary);margin-bottom:.5rem">✓ خطتك الحالية</div>':''}
+      <div class="plan-name-big">${p.name}</div>
+      <div class="plan-price-big" style="margin:.35rem 0"><sup>$</sup>${p.price_monthly}<span>/شهر</span></div>
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:1rem">أو $${p.price_yearly}/سنة (وفّر 17%)</div>
+      <div style="display:grid;gap:.45rem;margin-bottom:1.25rem">
+        <div style="font-size:.85rem;color:var(--muted)">✓ ${p.max_requests_per_month} طلب/شهر</div>
+        <div style="font-size:.85rem;color:var(--muted)">✓ ${p.max_keywords} كلمات مفتاحية</div>
+        <div style="font-size:.85rem;color:var(--muted)">✓ ${p.max_date_range_days} يوم نطاق زمني</div>
+        <div style="font-size:.85rem;color:var(--muted)">✓ ${p.platforms.join(', ')}</div>
+        ${(p.features||[]).slice(0,2).map(f=>`<div style="font-size:.85rem;color:var(--muted)">✓ ${f}</div>`).join('')}
+      </div>
+      ${p.id===currentPlanId ? '<button class="btn btn-secondary" style="width:100%" disabled>اشتراكك الحالي</button>' : `<button class="btn btn-primary" style="width:100%">الترقية إلى ${p.name}</button>`}
+    </div>`).join('');
+  showLoader(false);
+}
+
+// ===== BILLING =====
+async function loadBilling() {
+  showLoader(true);
+  const [subs, payments] = await Promise.all([
+    sb('subscriptions',`?user_id=eq.${currentUser.id}&select=*,plan:plan_id(name,price_monthly)`),
+    sb('payments',`?user_id=eq.${currentUser.id}&order=paid_at.desc`)
+  ]);
+  const sub = subs[0];
+  if(sub) {
+    const pct = sub.expires_at ? Math.round((new Date()-new Date(sub.started_at))/(new Date(sub.expires_at)-new Date(sub.started_at))*100) : 75;
+    document.getElementById('currentSubInfo').innerHTML = `
+      <div style="font-size:1.35rem;font-weight:900;margin-bottom:.25rem">${sub.plan?.name||'—'}</div>
+      <div class="muted" style="font-size:.88rem;margin-bottom:.85rem">${sub.billing_cycle==='yearly'?'سنوي':'شهري'} — تنتهي: ${sub.expires_at?fmtDate(sub.expires_at):'—'}</div>
+      <div class="progress-bar" style="margin-bottom:.6rem"><span style="width:${Math.min(pct,100)}%"></span></div>
+      <div class="muted" style="font-size:.8rem;margin-bottom:1rem">استُخدم ${pct}% من دورة الاشتراك</div>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="goto('plans',null)">ترقية الخطة</button>
+        <button class="btn btn-danger btn-sm">إلغاء الاشتراك</button>
+      </div>`;
+  } else {
+    document.getElementById('currentSubInfo').innerHTML = '<div class="empty-state">لا يوجد اشتراك نشط. <button class="btn btn-primary btn-sm" onclick="goto(\'plans\',null)">اشترك الآن</button></div>';
+  }
+  document.getElementById('paymentsTable').innerHTML = payments.map(p=>`
+    <tr><td><strong>$${p.amount}</strong></td><td><span class="badge ${p.status==='completed'?'b-success':p.status==='pending'?'b-warning':'b-error'}">${p.status==='completed'?'مكتمل':p.status==='pending'?'معلّق':'فاشل'}</span></td><td style="font-size:.82rem;color:var(--muted)">${fmtDate(p.paid_at)}</td></tr>`).join('') || '<tr><td colspan="3"><div class="empty-state">لا توجد مدفوعات</div></td></tr>';
+  showLoader(false);
+}
+
+// ===== TICKETS =====
+async function loadTickets() {
+  showLoader(true);
+  const tickets = await sb('support_tickets',`?user_id=eq.${currentUser.id}&order=created_at.desc`);
+  const catLabels = {technical:'تقني',billing:'فوترة',data_accuracy:'دقة بيانات',feature_request:'طلب ميزة',other:'أخرى'};
+  const prioLabels = {low:'منخفض',medium:'متوسط',high:'عالي',urgent:'عاجل'};
+  document.getElementById('ticketsTable').innerHTML = tickets.map(t=>`
+    <tr>
+      <td><strong style="font-size:.9rem">${t.subject}</strong>${t.admin_reply?`<div class="muted" style="font-size:.78rem;margin-top:.2rem">↩ رد الإدارة: ${t.admin_reply.slice(0,60)}...</div>`:''}</td>
+      <td><span class="muted" style="font-size:.82rem">${catLabels[t.category]||t.category}</span></td>
+      <td><span class="badge ${t.priority==='urgent'?'b-error':t.priority==='high'?'b-warning':'b-muted'}">${prioLabels[t.priority]||t.priority}</span></td>
+      <td><span class="badge ${t.status==='open'?'b-blue':t.status==='in_progress'?'b-warning':t.status==='resolved'?'b-success':'b-muted'}">${t.status==='open'?'مفتوح':t.status==='in_progress'?'قيد المعالجة':t.status==='resolved'?'محلول':'مغلق'}</span></td>
+      <td><span class="muted" style="font-size:.82rem">${fmtDate(t.created_at)}</span></td>
+    </tr>`).join('') || '<tr><td colspan="5"><div class="empty-state">لا توجد تذاكر دعم</div></td></tr>';
+  showLoader(false);
+}
+
+function showTicketForm() { const f = document.getElementById('ticketForm'); f.style.display = f.style.display==='none'?'block':'none'; }
+
+async function submitTicket() {
+  const subject = document.getElementById('ticketSubject').value.trim();
+  const cat = document.getElementById('ticketCat').value;
+  const desc = document.getElementById('ticketDesc').value.trim();
+  const msg = document.getElementById('ticketMsg');
+  if(!subject||!desc) { showMsg(msg,'يرجى تعبئة جميع الحقول','error'); return; }
+  showLoader(true);
+  const res = await sbPost('support_tickets', { user_id:currentUser.id, subject, description:desc, category:cat, status:'open', priority:'medium' });
+  showLoader(false);
+  if(res&&res[0]) { showMsg(msg,'تم إرسال التذكرة بنجاح ✓','success'); document.getElementById('ticketSubject').value=''; document.getElementById('ticketDesc').value=''; await loadTickets(); }
+  else showMsg(msg,'حدث خطأ، حاول مرة أخرى','error');
+}
+
+// ===== COMPLAINTS =====
+async function loadComplaints() {
+  showLoader(true);
+  const data = await sb('complaints',`?user_id=eq.${currentUser.id}&order=created_at.desc`);
+  const catLabels = {data_inaccuracy:'دقة بيانات',missing_data:'بيانات ناقصة',wrong_sentiment:'مشاعر خاطئة',billing_issue:'فوترة',other:'أخرى'};
+  document.getElementById('complaintsTable').innerHTML = data.map(c=>`
+    <tr>
+      <td><strong style="font-size:.9rem">${c.title}</strong></td>
+      <td><span class="muted" style="font-size:.82rem">${catLabels[c.category]||c.category}</span></td>
+      <td><span class="badge ${c.status==='open'?'b-blue':c.status==='under_review'?'b-warning':c.status==='resolved'?'b-success':'b-muted'}">${c.status==='open'?'مفتوح':c.status==='under_review'?'قيد المراجعة':c.status==='resolved'?'محلول':'مرفوض'}</span></td>
+      <td style="font-size:.83rem;color:var(--muted)">${c.admin_reply||'—'}</td>
+      <td><span class="muted" style="font-size:.82rem">${fmtDate(c.created_at)}</span></td>
+    </tr>`).join('') || '<tr><td colspan="5"><div class="empty-state">لا توجد شكاوى</div></td></tr>';
+  showLoader(false);
+}
+
+// ===== NOTIFICATIONS =====
+async function loadNotifications() {
+  const data = await sb('notifications',`?user_id=eq.${currentUser.id}&order=created_at.desc`);
+  const unread = data.filter(n=>!n.is_read).length;
+  if(unread > 0) {
+    document.getElementById('notifBadge').textContent = unread;
+    document.getElementById('notifBadge').style.display='inline-flex';
+    document.getElementById('notifIndicator').style.display='block';
+  }
+  const typeIcons = {analysis_complete:'📊',payment:'💳',subscription:'⭐',ticket_reply:'💬',system:'🔔',complaint_reply:'⚠️'};
+  document.getElementById('notifList').innerHTML = data.map(n=>`
+    <div class="notif-item ${n.is_read?'':'unread'}">
+      <div class="notif-dot ${n.is_read?'read':''}"></div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:.5rem"><span>${typeIcons[n.type]||'🔔'}</span><strong style="font-size:.92rem">${n.title}</strong></div>
+        ${n.body?`<div class="muted" style="font-size:.85rem;margin-top:.2rem">${n.body}</div>`:''}
+        <div class="muted" style="font-size:.78rem;margin-top:.3rem">${fmtDate(n.created_at)}</div>
+      </div>
+    </div>`).join('') || '<div class="empty-state">لا توجد إشعارات</div>';
+}
+
+async function markAllRead() {
+  await fetch(`${SB_URL}/rest/v1/notifications?user_id=eq.${currentUser.id}&is_read=eq.false`, { method:'PATCH', headers:{...SB_HEADERS,'Prefer':'return=minimal'}, body:JSON.stringify({is_read:true}) });
+  document.getElementById('notifBadge').style.display='none';
+  document.getElementById('notifIndicator').style.display='none';
+  await loadNotifications();
+}
+
+// ===== SETTINGS =====
+function loadSettings() {
+  document.getElementById('settingName').value = currentUser.full_name||'';
+  document.getElementById('settingEmail').value = currentUser.email||'';
+  document.getElementById('settingUserId').textContent = currentUser.id?.slice(0,18)+'…'||'—';
+  document.getElementById('settingRole').textContent = currentUser.role||'—';
+  document.getElementById('settingCreated').textContent = currentUser.created_at?fmtDate(currentUser.created_at):'—';
+}
+
+async function saveProfile() {
+  const name = document.getElementById('settingName').value.trim();
+  const email = document.getElementById('settingEmail').value.trim();
+  const msg = document.getElementById('settingMsg');
+  if(!name||!email) { showMsg(msg,'يرجى تعبئة الحقول','error'); return; }
+  showLoader(true);
+  const res = await sbPatch('users',`?id=eq.${currentUser.id}`,{full_name:name,email});
+  showLoader(false);
+  if(res&&res[0]) { currentUser={...currentUser,...res[0]}; localStorage.setItem('ih_user',JSON.stringify(currentUser)); document.getElementById('userName').textContent=name; showMsg(msg,'تم حفظ التغييرات ✓','success'); }
+  else showMsg(msg,'حدث خطأ','error');
+}
+
+// ===== HELPERS =====
+function showLoader(s) { document.getElementById('loader').classList.toggle('show',s); }
+function statusBadge(s) { return s==='completed'?'b-success':s==='analyzing'||s==='collecting'?'b-blue':s==='failed'?'b-error':'b-muted'; }
+function statusLabel(s) { return {pending:'معلّق',collecting:'جمع البيانات',analyzing:'قيد التحليل',completed:'مكتمل',failed:'فاشل'}[s]||s; }
+function typeLabel(t) { return {reputation:'السمعة',campaign:'الحملات',audience:'الجمهور',influencer:'المؤثرون',strategic:'استراتيجي'}[t]||t; }
+function fmtDate(d) { if(!d) return '—'; return new Date(d).toLocaleDateString('ar-DZ',{year:'numeric',month:'short',day:'numeric'}); }
+function fmtNum(n) { if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1e3) return (n/1e3).toFixed(1)+'k'; return n; }
+function showMsg(el, txt, type) {
+  if(!el) return;
+  el.innerHTML = `<div style="padding:.75rem 1rem;border-radius:.75rem;font-size:.88rem;background:color-mix(in srgb,var(--${type==='success'?'success':'error'}) 12%, transparent);color:var(--${type==='success'?'success':'error'});border:1px solid color-mix(in srgb,var(--${type==='success'?'success':'error'}) 25%, transparent)">${txt}</div>`;
+  el.style.display='block';
+  setTimeout(()=>{el.style.display='none';},4000);
+}
+</script>
+</body>
+</html>

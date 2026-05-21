@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>InsightHub — منصة تحليل وسائل التواصل الاجتماعي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root,[data-theme="light"]{
+  --bg:#f4f2ee;--surface:#ffffff;--surface2:#faf9f7;--surface3:#f0ede8;
+  --text:#1e1c18;--muted:#6b675e;--border:#d8d4cc;
+  --primary:#01696f;--primary-dark:#014f54;--primary-light:#d8e8e7;
+  --accent:#c8612a;--accent-light:#fae8de;
+  --success:#437a22;--warning:#d19900;--error:#a12c7b;--blue:#006494;
+  --radius:1rem;--radius2:1.35rem;
+  --shadow:0 12px 32px rgba(30,28,24,.08);--shadow2:0 2px 8px rgba(30,28,24,.06);
+}
+[data-theme="dark"]{
+  --bg:#13120f;--surface:#1a1916;--surface2:#201e1b;--surface3:#272420;
+  --text:#ede9df;--muted:#a09b91;--border:#333028;
+  --primary:#3d9098;--primary-dark:#2e7078;--primary-light:#1c3335;
+  --accent:#e07545;--accent-light:#3a2215;
+  --success:#7eba56;--warning:#efbe45;--error:#d46eae;--blue:#68a8dd;
+  --shadow:0 12px 32px rgba(0,0,0,.3);--shadow2:0 2px 8px rgba(0,0,0,.2);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.65}
+a{text-decoration:none;color:inherit}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer;border:0}
+img,svg,canvas{max-width:100%;display:block}
+
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 88%, transparent);backdrop-filter:blur(16px);border-bottom:1px solid color-mix(in srgb,var(--border) 70%, transparent);padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.brand{display:flex;align-items:center;gap:.85rem}
+.brand-mark{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 50%, #2ab5ad));display:grid;place-items:center;box-shadow:var(--shadow2)}
+.brand-name{font-size:1.15rem;font-weight:900;letter-spacing:-.01em}
+.brand-name span{color:var(--primary)}
+.nav-links{display:flex;align-items:center;gap:.25rem}
+.nav-links a{padding:.55rem .9rem;border-radius:.75rem;color:var(--muted);font-weight:600;font-size:.92rem;transition:.15s}
+.nav-links a:hover{background:var(--surface3);color:var(--text)}
+.top-actions{display:flex;align-items:center;gap:.65rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.8rem 1.25rem;border-radius:.9rem;font-weight:700;font-size:.92rem;min-height:42px;transition:.18s ease;line-height:1}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:var(--primary);color:#fff;box-shadow:0 4px 16px color-mix(in srgb,var(--primary) 35%, transparent)}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-secondary{background:var(--primary-light);color:var(--primary)}
+.btn-ghost{background:transparent;border:1px solid color-mix(in srgb,var(--border) 90%, transparent);color:var(--text)}
+.btn-accent{background:var(--accent);color:#fff}
+.icon-btn{width:42px;height:42px;border-radius:50%;background:var(--surface);border:1px solid color-mix(in srgb,var(--border) 85%, transparent);display:grid;place-items:center;color:var(--text)}
+
+/* PAGES */
+.page{display:none}.page.active{display:block}
+
+/* HERO SECTION */
+.hero-section{padding:5rem 2rem 3rem;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1.1fr .9fr;gap:3rem;align-items:center}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:var(--primary-light);color:var(--primary);padding:.45rem 1rem;border-radius:999px;font-size:.82rem;font-weight:800;margin-bottom:1.25rem}
+.hero-title{font-size:clamp(2rem,4vw,3.2rem);font-weight:900;line-height:1.2;letter-spacing:-.02em;margin-bottom:1rem}
+.hero-title .accent{color:var(--primary)}
+.hero-desc{color:var(--muted);font-size:1.05rem;margin-bottom:1.75rem;max-width:480px}
+.hero-actions{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center}
+.hero-visual{background:var(--surface);border:1px solid color-mix(in srgb,var(--border) 80%, transparent);border-radius:var(--radius2);box-shadow:var(--shadow);padding:1.25rem;overflow:hidden}
+.mini-chart-title{font-size:.8rem;color:var(--muted);font-weight:700;margin-bottom:.75rem}
+.donut-row{display:flex;align-items:center;gap:1.25rem}
+.donut-legend{display:grid;gap:.45rem}
+.donut-item{display:flex;align-items:center;gap:.5rem;font-size:.82rem}
+.donut-dot{width:10px;height:10px;border-radius:50%}
+.stats-mini{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-top:1rem}
+.stat-mini{background:var(--surface2);border-radius:.85rem;padding:.75rem;text-align:center}
+.stat-mini-val{font-size:1.3rem;font-weight:900}
+.stat-mini-lbl{font-size:.75rem;color:var(--muted)}
+
+/* FEATURES */
+.features-section{padding:4rem 2rem;max-width:1200px;margin:0 auto}
+.section-badge{display:inline-block;background:var(--accent-light);color:var(--accent);padding:.35rem .9rem;border-radius:999px;font-size:.8rem;font-weight:800;margin-bottom:1rem}
+.section-title{font-size:clamp(1.5rem,3vw,2.2rem);font-weight:900;margin-bottom:.6rem}
+.section-desc{color:var(--muted);max-width:520px;margin-bottom:2.5rem}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem}
+.feature-card{background:var(--surface);border:1px solid color-mix(in srgb,var(--border) 80%, transparent);border-radius:var(--radius2);padding:1.5rem;box-shadow:var(--shadow2);transition:.2s}
+.feature-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.feature-icon{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;margin-bottom:1rem;font-size:1.3rem}
+.fi-teal{background:var(--primary-light);color:var(--primary)}
+.fi-orange{background:var(--accent-light);color:var(--accent)}
+.fi-blue{background:color-mix(in srgb,var(--blue) 12%, transparent);color:var(--blue)}
+.fi-green{background:color-mix(in srgb,var(--success) 12%, transparent);color:var(--success)}
+.fi-purple{background:color-mix(in srgb,#7a39bb 12%, transparent);color:#7a39bb}
+.fi-yellow{background:color-mix(in srgb,var(--warning) 14%, transparent);color:var(--warning)}
+.feature-card h3{font-size:1rem;font-weight:800;margin-bottom:.4rem}
+.feature-card p{color:var(--muted);font-size:.88rem}
+
+/* PRICING */
+.pricing-section{padding:4rem 2rem;background:var(--surface2);border-top:1px solid color-mix(in srgb,var(--border) 60%, transparent)}
+.pricing-inner{max-width:1100px;margin:0 auto}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-top:2rem}
+.pricing-card{background:var(--surface);border:1px solid color-mix(in srgb,var(--border) 80%, transparent);border-radius:var(--radius2);padding:1.5rem;box-shadow:var(--shadow2);position:relative}
+.pricing-card.popular{border-color:var(--primary);box-shadow:0 8px 32px color-mix(in srgb,var(--primary) 20%, transparent)}
+.popular-badge{position:absolute;top:-13px;right:1.25rem;background:var(--primary);color:#fff;padding:.3rem .9rem;border-radius:999px;font-size:.78rem;font-weight:800}
+.plan-name{font-size:1.1rem;font-weight:900;margin-bottom:.25rem}
+.plan-desc{color:var(--muted);font-size:.85rem;margin-bottom:1rem}
+.plan-price{font-size:2.5rem;font-weight:900;line-height:1}
+.plan-price sup{font-size:1rem;font-weight:700;vertical-align:top;margin-top:.5rem}
+.plan-price span{font-size:.9rem;font-weight:500;color:var(--muted)}
+.plan-features{margin:1.25rem 0;display:grid;gap:.6rem}
+.plan-feat{display:flex;align-items:center;gap:.6rem;font-size:.88rem;color:var(--muted)}
+.plan-feat svg{flex-shrink:0;color:var(--primary)}
+.billing-toggle{display:flex;align-items:center;gap:.75rem;justify-content:center;margin-bottom:2rem}
+.toggle-btn{display:flex;background:var(--surface);border:1px solid color-mix(in srgb,var(--border) 85%, transparent);border-radius:999px;padding:.2rem}
+.toggle-btn button{padding:.55rem 1.1rem;border-radius:999px;font-size:.85rem;font-weight:700;color:var(--muted);background:none}
+.toggle-btn button.active{background:var(--primary);color:#fff}
+.discount-badge{background:color-mix(in srgb,var(--success) 14%, transparent);color:var(--success);padding:.25rem .7rem;border-radius:999px;font-size:.78rem;font-weight:800}
+
+/* HOW IT WORKS */
+.how-section{padding:4rem 2rem;max-width:1100px;margin:0 auto}
+.steps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:2rem}
+.step-card{background:var(--surface);border:1px solid color-mix(in srgb,var(--border) 80%, transparent);border-radius:var(--radius2);padding:1.25rem;text-align:center;box-shadow:var(--shadow2)}
+.step-num{width:40px;height:40px;border-radius:50%;background:var(--primary-light);color:var(--primary);font-weight:900;font-size:1.1rem;display:grid;place-items:center;margin:0 auto .9rem}
+.step-card h3{font-size:.95rem;font-weight:800;margin-bottom:.4rem}
+.step-card p{color:var(--muted);font-size:.83rem}
+
+/* CTA SECTION */
+.cta-section{padding:5rem 2rem;text-align:center}
+.cta-inner{max-width:620px;margin:0 auto}
+.cta-inner h2{font-size:clamp(1.6rem,3vw,2.4rem);font-weight:900;margin-bottom:.75rem}
+.cta-inner p{color:var(--muted);margin-bottom:2rem}
+.cta-actions{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap}
+
+/* FOOTER */
+.footer{background:var(--surface);border-top:1px solid color-mix(in srgb,var(--border) 70%, transparent);padding:2rem}
+.footer-inner{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
+.footer-brand{font-weight:900;font-size:1.05rem}
+.footer-brand span{color:var(--primary)}
+.footer-links{display:flex;gap:1.25rem}
+.footer-links a{color:var(--muted);font-size:.88rem}
+.footer-copy{color:var(--muted);font-size:.82rem}
+
+/* AUTH PAGES */
+.auth-page{min-height:100vh;display:grid;place-items:center;padding:2rem}
+.auth-card{width:100%;max-width:440px;background:var(--surface);border:1px solid color-mix(in srgb,var(--border) 80%, transparent);border-radius:var(--radius2);box-shadow:var(--shadow);padding:2rem}
+.auth-logo{display:flex;align-items:center;gap:.75rem;justify-content:center;margin-bottom:1.75rem}
+.auth-logo .brand-mark{width:48px;height:48px;border-radius:15px}
+.auth-title{font-size:1.6rem;font-weight:900;text-align:center;margin-bottom:.35rem}
+.auth-sub{color:var(--muted);text-align:center;font-size:.9rem;margin-bottom:1.75rem}
+.form-field{display:grid;gap:.4rem;margin-bottom:1rem}
+.form-label{font-size:.88rem;font-weight:700;color:var(--text)}
+.form-input{width:100%;padding:.9rem 1rem;background:var(--surface2);border:1.5px solid color-mix(in srgb,var(--border) 85%, transparent);border-radius:.9rem;color:var(--text);outline:none;transition:.15s}
+.form-input:focus{border-color:var(--primary);background:var(--surface)}
+.form-input.error{border-color:var(--error)}
+.field-error{font-size:.8rem;color:var(--error);display:none}
+.field-error.show{display:block}
+.form-footer{display:flex;justify-content:space-between;align-items:center;margin-top:1.25rem;font-size:.88rem}
+.form-footer a{color:var(--primary);font-weight:700}
+.auth-divider{text-align:center;color:var(--muted);font-size:.85rem;margin:1rem 0;position:relative}
+.auth-divider::before{content:'';position:absolute;top:50%;right:0;left:0;height:1px;background:var(--border)}
+.auth-divider span{background:var(--surface);padding:0 .75rem;position:relative}
+.auth-switch{text-align:center;margin-top:1.25rem;font-size:.88rem;color:var(--muted)}
+.auth-switch a{color:var(--primary);font-weight:700}
+.alert{padding:.85rem 1rem;border-radius:.85rem;font-size:.88rem;margin-bottom:1rem;display:none}
+.alert.show{display:flex;gap:.5rem;align-items:flex-start}
+.alert-error{background:color-mix(in srgb,var(--error) 12%, transparent);color:var(--error);border:1px solid color-mix(in srgb,var(--error) 25%, transparent)}
+.alert-success{background:color-mix(in srgb,var(--success) 12%, transparent);color:var(--success);border:1px solid color-mix(in srgb,var(--success) 25%, transparent)}
+.loading-overlay{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 85%, transparent);backdrop-filter:blur(4px);display:none;place-items:center;z-index:100;flex-direction:column;gap:1rem}
+.loading-overlay.show{display:flex}
+.spinner{width:44px;height:44px;border-radius:50%;border:4px solid var(--border);border-top-color:var(--primary);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.password-field{position:relative}
+.password-toggle{position:absolute;top:50%;transform:translateY(-50%);left:.9rem;background:none;color:var(--muted);font-size:.88rem}
+
+/* STATUS CHIP */
+.chip{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .7rem;border-radius:999px;font-size:.78rem;font-weight:800}
+.chip-success{background:color-mix(in srgb,var(--success) 14%, transparent);color:var(--success)}
+.chip-warning{background:color-mix(in srgb,var(--warning) 14%, transparent);color:var(--warning)}
+.chip-error{background:color-mix(in srgb,var(--error) 14%, transparent);color:var(--error)}
+.chip-blue{background:color-mix(in srgb,var(--blue) 12%, transparent);color:var(--blue)}
+.chip-muted{background:color-mix(in srgb,var(--muted) 12%, transparent);color:var(--muted)}
+
+/* RESPONSIVE */
+@media(max-width:900px){.hero-section,.features-grid,.pricing-grid{grid-template-columns:1fr}.steps-grid{grid-template-columns:repeat(2,1fr)}.hero-section{padding:3rem 1.25rem 2rem}.nav-links{display:none}}
+@media(max-width:640px){.steps-grid{grid-template-columns:1fr}.topbar{padding:.9rem 1.25rem}}
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loader">
+  <div class="spinner"></div>
+  <div style="color:var(--muted);font-size:.92rem">جاري التحميل...</div>
+</div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    </div>
+    <div class="brand-name">Insight<span>Hub</span></div>
+  </div>
+  <nav class="nav-links">
+    <a href="#landing" onclick="showPage('landing')">الرئيسية</a>
+    <a href="#features" onclick="document.getElementById('features-section').scrollIntoView({behavior:'smooth'});return false">الخدمات</a>
+    <a href="#pricing" onclick="document.getElementById('pricing-section').scrollIntoView({behavior:'smooth'});return false">الأسعار</a>
+  </nav>
+  <div class="top-actions">
+    <button class="icon-btn" id="themeBtn" title="تبديل الثيم">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+    <button class="btn btn-ghost" onclick="showPage('login')">تسجيل الدخول</button>
+    <button class="btn btn-primary" onclick="showPage('signup')">ابدأ مجاناً</button>
+  </div>
+</header>
+
+<!-- LANDING PAGE -->
+<div id="landing" class="page active">
+
+  <!-- HERO -->
+  <section class="hero-section">
+    <div>
+      <div class="hero-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        منصة تحليل البيانات الضخمة #1 في الجزائر
+      </div>
+      <h1 class="hero-title">
+        حوّل بيانات<br>
+        <span class="accent">وسائل التواصل</span><br>
+        إلى قرارات ذكية
+      </h1>
+      <p class="hero-desc">
+        منصة InsightHub تجمع وتحلل ملايين التغريدات والمنشورات باستخدام الذكاء الاصطناعي، لتزوّدك برؤى استراتيجية تساعدك على اتخاذ قرارات مبنية على البيانات.
+      </p>
+      <div class="hero-actions">
+        <button class="btn btn-primary" onclick="showPage('signup')" style="font-size:1rem;padding:.95rem 1.75rem">ابدأ تجربتك المجانية</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('features-section').scrollIntoView({behavior:'smooth'})">اكتشف المزيد ↓</button>
+      </div>
+      <div style="display:flex;gap:1.5rem;margin-top:1.75rem;flex-wrap:wrap">
+        <div style="font-size:.85rem;color:var(--muted)"><strong style="color:var(--text)">+500</strong> مؤسسة تثق بنا</div>
+        <div style="font-size:.85rem;color:var(--muted)"><strong style="color:var(--text)">14M+</strong> منشور محلل</div>
+        <div style="font-size:.85rem;color:var(--muted)"><strong style="color:var(--text)">98.7%</strong> دقة التحليل</div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="mini-chart-title">تحليل المشاعر — الوقت الفعلي</div>
+      <div class="donut-row">
+        <canvas id="heroChart" width="140" height="140" style="width:140px;height:140px;flex-shrink:0"></canvas>
+        <div class="donut-legend">
+          <div class="donut-item"><div class="donut-dot" style="background:#437a22"></div> إيجابي — 58%</div>
+          <div class="donut-item"><div class="donut-dot" style="background:#006494"></div> محايد — 27%</div>
+          <div class="donut-item"><div class="donut-dot" style="background:#a12c7b"></div> سلبي — 15%</div>
+        </div>
+      </div>
+      <div class="stats-mini">
+        <div class="stat-mini"><div class="stat-mini-val" style="color:var(--primary)">14.3k</div><div class="stat-mini-lbl">منشور</div></div>
+        <div class="stat-mini"><div class="stat-mini-val" style="color:var(--accent)">3.4k</div><div class="stat-mini-lbl">مستخدم</div></div>
+        <div class="stat-mini"><div class="stat-mini-val" style="color:var(--blue)">2.1M</div><div class="stat-mini-lbl">وصول</div></div>
+      </div>
+      <div style="margin-top:.85rem;background:var(--surface2);border-radius:.85rem;padding:.85rem">
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem">المواضيع الأكثر تداولاً</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.35rem">
+          <span class="chip chip-blue">#السعر</span>
+          <span class="chip chip-success">#الجودة</span>
+          <span class="chip chip-warning">#الطعم</span>
+          <span class="chip chip-muted">#الشحن</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features-section" id="features-section">
+    <div class="section-badge">خدماتنا</div>
+    <h2 class="section-title">كل ما تحتاجه لفهم جمهورك</h2>
+    <p class="section-desc">من تحليل المشاعر إلى اكتشاف المؤثرين، نوفر لك أدوات تحليلية متكاملة مدعومة بالذكاء الاصطناعي.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon fi-teal">📊</div>
+        <h3>تحليل السمعة الرقمية</h3>
+        <p>تتبع كيف يتحدث الناس عن علامتك التجارية وتحليل المشاعر بدقة تصل إلى 98%.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-orange">📣</div>
+        <h3>تحليل الحملات التسويقية</h3>
+        <p>قِس أداء حملاتك الإعلانية وتحليل الهاشتاغات ومقارنة نتائجك مع المنافسين.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-blue">👥</div>
+        <h3>تحليل سلوك الجمهور</h3>
+        <p>افهم جمهورك بعمق: اهتماماتهم، أوقات نشاطهم، وكيفية تقسيمهم إلى شرائح.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-purple">⭐</div>
+        <h3>اكتشاف المؤثرين</h3>
+        <p>تحديد الحسابات الأكثر تأثيراً في مجال عملك وقياس مدى قوة تأثيرهم الحقيقي.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-green">📋</div>
+        <h3>التقارير الاستراتيجية</h3>
+        <p>تقارير PDF احترافية مع توصيات عملية قابلة للتطبيق فوراً لدعم قراراتك.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-yellow">🔗</div>
+        <h3>تحليل الشبكات الاجتماعية</h3>
+        <p>تصوير شبكة العلاقات والتفاعلات لفهم كيف تنتشر المعلومات في مجتمعك.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-section">
+    <div class="section-badge">كيف تعمل</div>
+    <h2 class="section-title">أربع خطوات بسيطة</h2>
+    <p class="section-desc">من الفكرة إلى الرؤية الاستراتيجية في دقائق.</p>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">١</div>
+        <h3>أدخل الكلمات المفتاحية</h3>
+        <p>حدد ما تريد تحليله من كلمات أو هاشتاغات أو أسماء علامات تجارية.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">٢</div>
+        <h3>جمع البيانات</h3>
+        <p>نجمع الملايين من المنشورات تلقائياً من المنصات المختارة.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">٣</div>
+        <h3>التحليل الذكي</h3>
+        <p>نماذج الذكاء الاصطناعي تحلل البيانات وتستخرج الأنماط والرؤى.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">٤</div>
+        <h3>النتائج والتوصيات</h3>
+        <p>احصل على لوحة تحكم تفاعلية وتقارير جاهزة مع توصيات عملية.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="pricing-section" id="pricing-section">
+    <div class="pricing-inner">
+      <div class="section-badge">الأسعار</div>
+      <h2 class="section-title">اختر خطتك</h2>
+      <p class="section-desc">أسعار شفافة بدون رسوم خفية. جرّب مجاناً 14 يوم.</p>
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:2rem">
+        <div class="toggle-btn">
+          <button class="active" id="monthlyBtn" onclick="setBilling('monthly')">شهري</button>
+          <button id="yearlyBtn" onclick="setBilling('yearly')">سنوي</button>
+        </div>
+        <span class="discount-badge" id="discountBadge" style="display:none">وفّر 17%</span>
+      </div>
+      <div class="pricing-grid" id="pricingGrid">
+        <div class="pricing-card">
+          <div class="plan-name">Starter</div>
+          <div class="plan-desc">للأفراد والشركات الناشئة</div>
+          <div class="plan-price"><sup>$</sup><span id="p1" data-monthly="19" data-yearly="190">19</span><span>/شهر</span></div>
+          <div class="plan-features">
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 10 طلبات شهرياً</div>
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 3 كلمات مفتاحية</div>
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> تحليل مشاعر أساسي</div>
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> تقارير PDF</div>
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> دعم عبر البريد</div>
+          </div>
+          <button class="btn btn-ghost" style="width:100%" onclick="showPage('signup')">ابدأ مجاناً</button>
+        </div>
+        <div class="pricing-card popular">
+          <div class="popular-badge">الأكثر شعبية</div>
+          <div class="plan-name">Pro</div>
+          <div class="plan-desc">للشركات الصغيرة والمتوسطة</div>
+          <div class="plan-price"><sup>$</sup><span id="p2" data-monthly="49" data-yearly="490">49</span><span>/شهر</span></div>
+          <div class="plan-features">
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 50 طلباً شهرياً</div>
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 10 كلمات مفتاحية</div>
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> كل أنواع التحليل</div>
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> اكتشاف المؤثرين</div>
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> دعم أولوي</div>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="showPage('signup')">ابدأ مجاناً</button>
+        </div>
+        <div class="pricing-card">
+          <div class="plan-name">Enterprise</div>
+          <div class="plan-desc">للمؤسسات الكبرى والحكومات</div>
+          <div class="plan-price"><sup>$</sup><span id="p3" data-monthly="149" data-yearly="1490">149</span><span>/شهر</span></div>
+          <div class="plan-features">
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 200 طلب شهرياً</div>
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 25 كلمة مفتاحية</div>
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> API مخصص</div>
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> مدير حساب مخصص</div>
+            <div class="plan-feat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> SLA 99.9%</div>
+          </div>
+          <button class="btn btn-secondary" style="width:100%" onclick="showPage('signup')">تواصل معنا</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-inner">
+      <h2>ابدأ تحليل جمهورك اليوم</h2>
+      <p>انضم إلى أكثر من 500 مؤسسة تستخدم InsightHub لاتخاذ قرارات أذكى وأسرع.</p>
+      <div class="cta-actions">
+        <button class="btn btn-primary" onclick="showPage('signup')" style="font-size:1rem;padding:.95rem 2rem">ابدأ مجاناً — 14 يوم</button>
+        <button class="btn btn-ghost" onclick="showPage('login')">لديك حساب؟ ادخل</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">Insight<span>Hub</span> &copy; 2026</div>
+      <div class="footer-links">
+        <a href="#">الخصوصية</a>
+        <a href="#">الشروط</a>
+        <a href="#">الدعم</a>
+      </div>
+      <div class="footer-copy">منصة InsightHub — مشروع ماستر تحليل البيانات الضخمة</div>
+    </div>
+  </footer>
+</div>
+
+<!-- LOGIN PAGE -->
+<div id="login" class="page">
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="brand-mark">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </div>
+      </div>
+      <div class="auth-title">مرحباً بعودتك</div>
+      <div class="auth-sub">سجّل دخولك للوصول إلى لوحة التحكم</div>
+
+      <div class="alert alert-error" id="loginAlert"></div>
+      <div class="alert alert-success" id="loginSuccess"></div>
+
+      <div class="form-field">
+        <label class="form-label">البريد الإلكتروني</label>
+        <input type="email" class="form-input" id="loginEmail" placeholder="fouad@example.com" autocomplete="email">
+        <div class="field-error" id="loginEmailErr">أدخل بريداً إلكترونياً صحيحاً</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">كلمة المرور</label>
+        <div class="password-field">
+          <input type="password" class="form-input" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+          <button class="password-toggle" onclick="togglePass('loginPass',this)" type="button">👁</button>
+        </div>
+        <div class="field-error" id="loginPassErr">كلمة المرور مطلوبة</div>
+      </div>
+      <div class="form-footer">
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer">
+          <input type="checkbox" id="rememberMe"> تذكّرني
+        </label>
+        <a href="#">نسيت كلمة المرور؟</a>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:1.25rem" onclick="doLogin()">تسجيل الدخول</button>
+
+
+      <div class="auth-switch">ليس لديك حساب؟ <a onclick="showPage('signup')">إنشاء حساب جديد</a></div>
+      <div style="margin-top:.75rem;text-align:center"><a onclick="showPage('landing')" style="color:var(--muted);font-size:.85rem">← العودة للرئيسية</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- SIGNUP PAGE -->
+<div id="signup" class="page">
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="brand-mark">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </div>
+      </div>
+      <div class="auth-title">إنشاء حساب جديد</div>
+      <div class="auth-sub">انضم وابدأ تجربتك المجانية 14 يوماً</div>
+
+      <div class="alert alert-error" id="signupAlert"></div>
+
+      <div class="form-field">
+        <label class="form-label">الاسم الكامل</label>
+        <input type="text" class="form-input" id="signupName" placeholder="فؤاد مسلم" autocomplete="name">
+        <div class="field-error" id="signupNameErr">الاسم مطلوب</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">البريد الإلكتروني</label>
+        <input type="email" class="form-input" id="signupEmail" placeholder="fouad@example.com" autocomplete="email">
+        <div class="field-error" id="signupEmailErr">أدخل بريداً إلكترونياً صحيحاً</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">كلمة المرور</label>
+        <div class="password-field">
+          <input type="password" class="form-input" id="signupPass" placeholder="••••••••" autocomplete="new-password">
+          <button class="password-toggle" onclick="togglePass('signupPass',this)" type="button">👁</button>
+        </div>
+        <div class="field-error" id="signupPassErr">8 أحرف على الأقل</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">الخطة</label>
+        <select class="form-input" id="signupPlan">
+          <option value="starter">Starter — $19/شهر</option>
+          <option value="pro" selected>Pro — $49/شهر (الأكثر شعبية)</option>
+          <option value="enterprise">Enterprise — $149/شهر</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="doSignup()">إنشاء الحساب</button>
+      <div class="auth-switch">لديك حساب؟ <a onclick="showPage('login')">تسجيل الدخول</a></div>
+      <div style="margin-top:.75rem;text-align:center"><a onclick="showPage('landing')" style="color:var(--muted);font-size:.85rem">← العودة للرئيسية</a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== SUPABASE CONFIG =====
+const SUPABASE_URL = 'https://mckhttjxpflppzndoavy.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ja2h0dGp4cGZscHB6bmRvYXZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5NzE0NzMsImV4cCI6MjA5NDU0NzQ3M30.QkNaC1BdNItqiVpHsmQo4RD2xLy8xw6uCsaGB_zjotE';
+
+async function sbQuery(table, params='') {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' }
+  });
+  return res.json();
+}
+
+// ===== ROUTING =====
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById(id);
+  if(el) { el.classList.add('active'); window.scrollTo(0,0); }
+}
+
+// ===== THEME =====
+document.getElementById('themeBtn').onclick = () => {
+  const root = document.documentElement;
+  root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  if(window.__heroChart) { window.__heroChart.destroy(); drawHeroChart(); }
+};
+
+// ===== BILLING TOGGLE =====
+function setBilling(type) {
+  document.getElementById('monthlyBtn').classList.toggle('active', type==='monthly');
+  document.getElementById('yearlyBtn').classList.toggle('active', type==='yearly');
+  document.getElementById('discountBadge').style.display = type==='yearly' ? 'inline-flex' : 'none';
+  ['p1','p2','p3'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = el.dataset[type];
+  });
+}
+
+// ===== HERO CHART =====
+function drawHeroChart() {
+  const style = getComputedStyle(document.documentElement);
+  const ctx = document.getElementById('heroChart');
+  if(!ctx) return;
+  window.__heroChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: ['إيجابي','محايد','سلبي'], datasets: [{ data: [58,27,15], backgroundColor: ['#437a22','#006494','#a12c7b'], borderWidth: 0, hoverOffset: 6 }] },
+    options: { responsive: false, plugins: { legend: { display: false } }, cutout: '68%' }
+  });
+}
+drawHeroChart();
+
+// ===== PASSWORD TOGGLE =====
+function togglePass(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+
+// ===== SHOW ALERT =====
+function showAlert(id, msg, type='error') {
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.textContent = msg;
+  el.className = `alert alert-${type} show`;
+}
+function hideAlert(id) {
+  const el = document.getElementById(id);
+  if(el) el.className = 'alert';
+}
+
+// ===== LOGIN =====
+async function doLogin() {
+  hideAlert('loginAlert'); hideAlert('loginSuccess');
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  let valid = true;
+  if(!email || !email.includes('@')) { document.getElementById('loginEmailErr').classList.add('show'); valid=false; } else document.getElementById('loginEmailErr').classList.remove('show');
+  if(!pass) { document.getElementById('loginPassErr').classList.add('show'); valid=false; } else document.getElementById('loginPassErr').classList.remove('show');
+  if(!valid) return;
+
+  document.getElementById('loader').classList.add('show');
+  try {
+    const users = await sbQuery('users', `?email=eq.${encodeURIComponent(email)}&select=id,full_name,role,email,password_hash,is_active`);
+    document.getElementById('loader').classList.remove('show');
+    if(!users || !users.length) { showAlert('loginAlert','البريد الإلكتروني غير مسجل في النظام'); return; }
+    const user = users[0];
+    if(user.is_active === false) { showAlert('loginAlert','هذا الحساب موقوف، تواصل مع الدعم'); return; }
+    if(!user.password_hash || user.password_hash !== pass) { showAlert('loginAlert','كلمة المرور غير صحيحة'); return; }
+    // Remove password_hash before storing
+    const { password_hash, ...safeUser } = user;
+    localStorage.setItem('ih_user', JSON.stringify(safeUser));
+    showAlert('loginSuccess', `مرحباً ${user.full_name}، جاري التوجيه...`, 'success');
+    setTimeout(() => {
+      if(user.role === 'admin' || user.role === 'moderator') window.location.href = 'admin-dashboard.html';
+      else window.location.href = 'user-dashboard.html';
+    }, 900);
+  } catch(e) {
+    document.getElementById('loader').classList.remove('show');
+    showAlert('loginAlert', 'خطأ في الاتصال بالخادم');
+  }
+}
+
+// ===== SIGNUP =====
+async function doSignup() {
+  hideAlert('signupAlert');
+  const name = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const pass = document.getElementById('signupPass').value;
+  let valid = true;
+  if(!name) { document.getElementById('signupNameErr').classList.add('show'); valid=false; } else document.getElementById('signupNameErr').classList.remove('show');
+  if(!email||!email.includes('@')) { document.getElementById('signupEmailErr').classList.add('show'); valid=false; } else document.getElementById('signupEmailErr').classList.remove('show');
+  if(!pass||pass.length<8) { document.getElementById('signupPassErr').classList.add('show'); valid=false; } else document.getElementById('signupPassErr').classList.remove('show');
+  if(!valid) return;
+
+  document.getElementById('loader').classList.add('show');
+  try {
+    const existing = await sbQuery('users',`?email=eq.${encodeURIComponent(email)}&select=id`);
+    if(existing && existing.length) {
+      document.getElementById('loader').classList.remove('show');
+      showAlert('signupAlert','هذا البريد الإلكتروني مسجّل بالفعل');
+      return;
+    }
+    const plan = document.getElementById('signupPlan').value;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify({ email, full_name: name, role: 'member', password_hash: pass })
+    });
+    const newUser = await res.json();
+    document.getElementById('loader').classList.remove('show');
+    if(newUser && newUser[0]) {
+      localStorage.setItem('ih_user', JSON.stringify(newUser[0]));
+      window.location.href = 'user-dashboard.html';
+    } else {
+      showAlert('signupAlert', 'حدث خطأ أثناء إنشاء الحساب، حاول مرة أخرى');
+    }
+  } catch(e) {
+    document.getElementById('loader').classList.remove('show');
+    showAlert('signupAlert', 'خطأ في الاتصال بالخادم');
+  }
+}
+
+// Handle hash routing
+const hash = location.hash.replace('#','');
+if(hash === 'login' || hash === 'signup') showPage(hash);
+</script>
+</body>
+</html>
