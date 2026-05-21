@@ -1,0 +1,60 @@
+version: "3.9"
+
+# ============================================================
+# InsightHub Backend - Docker Compose
+# يشغّل: API + Celery worker + Celery beat + Redis + Flower
+# ============================================================
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: insighthub_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: .
+    container_name: insighthub_api
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+      - hf_cache:/tmp/hf_cache
+
+  worker:
+    build: .
+    container_name: insighthub_worker
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+    volumes:
+      - .:/app
+      - hf_cache:/tmp/hf_cache
+
+  flower:
+    build: .
+    container_name: insighthub_flower
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    command: celery -A app.workers.celery_app flower --port=5555
+
+volumes:
+  hf_cache:

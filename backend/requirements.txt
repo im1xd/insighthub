@@ -1,0 +1,68 @@
+# =====================================================================
+# InsightHub Backend - Python Dependencies
+# يعتمد المشروع على PySpark لمعالجة الـ datasets الضخمة + HuggingFace
+# للـ streaming + Transformers للـ NLP العربي
+# =====================================================================
+
+# ----- Web framework -----
+fastapi==0.111.0
+uvicorn[standard]==0.30.0
+python-dotenv==1.0.1
+pydantic==2.7.1
+pydantic-settings==2.2.1
+
+# ----- Supabase / Database -----
+supabase==2.4.2
+postgrest==0.16.8
+httpx==0.27.0
+
+# ----- Async task queue -----
+celery==5.4.0
+redis==5.0.4
+flower==2.0.1
+
+# ----- Big Data: PySpark -----
+# يتطلب Java 17+ على نظام التشغيل
+pyspark==3.5.1
+pyarrow==16.1.0
+
+# ----- Datasets streaming -----
+datasets==2.19.1            # HuggingFace datasets (streaming mode)
+huggingface-hub==0.23.0
+fsspec==2024.3.1
+
+# ----- NLP / ML -----
+transformers==4.41.0
+torch==2.3.0
+sentencepiece==0.2.0
+scikit-learn==1.5.0
+nltk==3.8.1
+
+# Topic modeling
+bertopic==0.16.2
+umap-learn==0.5.6
+hdbscan==0.8.36
+
+# Arabic-specific NLP (اختياري، ثقيل)
+# camel-tools==1.5.2          # uncomment إذا أردت معالجة عربية متقدمة
+
+# ----- Network analysis -----
+networkx==3.3
+
+# ----- Data manipulation -----
+pandas==2.2.2
+numpy==1.26.4
+
+# ----- Utilities -----
+loguru==0.7.2
+tenacity==8.3.0
+python-dateutil==2.9.0
+
+# ----- Security (للمستقبل) -----
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+
+# ----- Dev / Testing -----
+pytest==8.2.1
+pytest-asyncio==0.23.7
+ruff==0.4.4
