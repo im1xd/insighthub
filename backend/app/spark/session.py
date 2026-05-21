@@ -2,8 +2,7 @@
 SparkSession Manager - singleton مع Lazy initialization.
 
 PySpark غالي التهيئة (يحتاج JVM)، لذا نُهيِّئه مرة واحدة لكل process
-ونعيد استخدامه. يستفيد منه workers الـ Celery عبر إعادة استخدام
-نفس الـ JVM للـ tasks المتعاقبة.
+ونعيد استخدامه عبر كل المهام داخل نفس process الـ FastAPI.
 """
 
 from __future__ import annotations

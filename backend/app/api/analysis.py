@@ -5,6 +5,9 @@ POST /api/v1/analysis/trigger     - إطلاق تحليل لطلب موجود
 GET  /api/v1/analysis/{id}/status - حالة طلب
 GET  /api/v1/analysis/pending     - طلبات pending
 POST /api/v1/analysis/{id}/retry  - إعادة تشغيل طلب فشل
+
+التشغيل يتم داخل process الـ FastAPI نفسه عبر BackgroundTasks
+مع تحكم بالتوازي عبر app.workers.runner (واحد في المرة).
 """
 
 from __future__ import annotations
@@ -14,36 +17,57 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from app.database.models import StatusResponse, TriggerRequest
-from app.database.supabase_client import get_pending_requests, get_request, update_request_status
-from app.workers.analysis_worker import run_analysis
+from app.database.supabase_client import (
+    get_pending_requests,
+    get_request,
+    update_request_status,
+)
+from app.workers.runner import (
+    claim,
+    in_progress_count,
+    is_in_progress,
+    run_with_concurrency,
+)
 
 
 router = APIRouter()
 
 
 @router.post("/trigger")
-def trigger_analysis(payload: TriggerRequest) -> Dict[str, Any]:
+def trigger_analysis(
+    payload: TriggerRequest,
+    background_tasks: BackgroundTasks,
+) -> Dict[str, Any]:
     """
-    يضع المهمة في طابور Celery. يجب أن يكون الطلب موجوداً
-    في analysis_requests مسبقاً.
+    يضع المهمة في طابور التنفيذ. الطلب يجب أن يكون موجوداً
+    في analysis_requests مسبقاً (ينشئه الـ Frontend).
     """
     request_id = str(payload.request_id)
     request_data = get_request(request_id)
     if request_data is None:
         raise HTTPException(status_code=404, detail="Analysis request not found")
 
-    # نُعلِّم الطلب فوراً كـ pending للتجنّب الازدواجية
     if request_data.get("status") == "completed":
-        return {"task_id": None, "status": "already_completed", "request_id": request_id}
+        return {"status": "already_completed", "request_id": request_id}
 
-    # إذا كان قيد المعالجة، نرفض إلا إذا أُجبر retry
+    if is_in_progress(request_id):
+        return {"status": "already_processing", "request_id": request_id}
+
     current_status = request_data.get("status")
     if current_status in {"collecting", "analyzing"}:
-        return {"task_id": None, "status": "already_processing", "request_id": request_id}
+        return {"status": "already_processing", "request_id": request_id}
 
-    update_request_status(request_id, "pending", 0)
-    task = run_analysis.apply_async(args=[request_id, request_data])
-    return {"task_id": task.id, "status": "queued", "request_id": request_id}
+    if not claim(request_id):
+        return {"status": "already_processing", "request_id": request_id}
+
+    update_request_status(request_id, "pending", 5)
+    background_tasks.add_task(run_with_concurrency, request_id, request_data)
+
+    return {
+        "status": "queued",
+        "request_id": request_id,
+        "in_progress_count": in_progress_count(),
+    }
 
 
 @router.get("/{request_id}/status", response_model=StatusResponse)
@@ -66,10 +90,20 @@ def list_pending(limit: int = 20) -> List[Dict[str, Any]]:
 
 
 @router.post("/{request_id}/retry")
-def retry_analysis(request_id: str) -> Dict[str, Any]:
+def retry_analysis(
+    request_id: str,
+    background_tasks: BackgroundTasks,
+) -> Dict[str, Any]:
     data = get_request(request_id)
     if data is None:
         raise HTTPException(status_code=404, detail="Analysis request not found")
+
+    if is_in_progress(request_id):
+        return {"status": "already_processing", "request_id": request_id}
+
+    if not claim(request_id):
+        return {"status": "already_processing", "request_id": request_id}
+
     update_request_status(request_id, "pending", 0, error_message=None)
-    task = run_analysis.apply_async(args=[request_id, data])
-    return {"task_id": task.id, "status": "queued", "request_id": request_id}
+    background_tasks.add_task(run_with_concurrency, request_id, data)
+    return {"status": "queued", "request_id": request_id}

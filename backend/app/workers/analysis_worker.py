@@ -1,19 +1,10 @@
 """
 المهمة الأساسية - pipeline التحليل الكامل.
 
-تنفذ 10 خطوات:
-  1.  set status=collecting (10%)
-  2.  Stream datasets (HF) ⇒ list of canonical posts (25%)
-  3.  Clean + normalize each post (35%)
-  4.  Build Spark DataFrame
-  5.  Filter by keywords + date (45%)
-  6.  Sentiment analysis (60%)
-  7.  Topic modeling (70%)
-  8.  Influencer detection (80%)
-  9.  Network analysis (88%)
-  10. Aggregate stats + generate summary/recommendations
-  11. Save to Supabase + create notification (100%)
+سابقاً كانت Celery task. الآن دالة عادية تُستدعى من
+FastAPI BackgroundTasks عبر runner.run_with_concurrency.
 
+تنفذ 11 خطوة وتحدّث progress في Supabase عند كل خطوة.
 عند الفشل في أي خطوة، نُعلِّم الطلب بـ status=failed مع error_message.
 """
 
@@ -41,26 +32,20 @@ from app.datasets.stream_manager import StreamManager
 from app.processors.cleaner import clean_post, is_valid_for_analysis
 from app.spark.aggregations import compute_overall_stats, dataset_breakdown
 from app.spark.filters import apply_full_filter, build_dataframe_from_rows
-from app.workers.celery_app import celery_app
 
 
-# =====================================================================
-# نقطة دخول Celery
-# =====================================================================
-
-@celery_app.task(
-    bind=True,
-    name="app.workers.analysis_worker.run_analysis",
-    max_retries=2,
-    default_retry_delay=60,
-)
-def run_analysis(self, request_id: str, request_data: Dict[str, Any]) -> Dict[str, Any]:
+def run_analysis(request_id: str, request_data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    request_data يحتوي على ما تم قراءته من analysis_requests:
+    يُنفّذ pipeline تحليل واحد من البداية للنهاية.
+    تُستدعى عادةً من FastAPI BackgroundTasks (داخل runner).
+
+    request_data يحتوي ما تم قراءته من analysis_requests:
       id, user_id, title, keywords, platforms, analysis_type,
       date_from, date_to, ...
     اختياري:
       dataset_ids: list[str]  (إذا غاب، نستخدم default)
+
+    يُرجع dict موجز عن النتيجة - لا يرفع استثناءات للأعلى.
     """
     started_at = datetime.utcnow()
     user_id = str(request_data.get("user_id") or "")
@@ -132,10 +117,8 @@ def run_analysis(self, request_id: str, request_data: Dict[str, Any]) -> Dict[st
             )
 
         # نُحوّل Spark Rows إلى dicts نمط cleaned (مع mentions/hashtags المُستخرجة)
-        # نحتفظ أيضاً بمراجع الـ cleaned الأصلية لأن mentions/hashtags ليست ضمن Spark schema
         filtered_texts_set = {r["text"] for r in filtered_rows}
         posts = [p for p in cleaned if p.get("cleaned_text") and p["cleaned_text"] in filtered_texts_set]
-        # في حال عدم تطابق نتيجة tokenization، fallback نستخدم الكل المنظف
         if not posts:
             posts = cleaned
 
@@ -226,20 +209,18 @@ def run_analysis(self, request_id: str, request_data: Dict[str, Any]) -> Dict[st
             },
         )
 
-        logger.info(f"[worker] analysis {request_id} completed successfully")
+        duration = (datetime.utcnow() - started_at).total_seconds()
+        logger.info(f"[worker] analysis {request_id} completed in {duration:.1f}s")
         return {
             "status": "success",
             "request_id": request_id,
             "total_posts": overall["total_posts"],
-            "duration_seconds": (datetime.utcnow() - started_at).total_seconds(),
+            "duration_seconds": duration,
         }
 
     except Exception as exc:
         logger.exception(f"[worker] analysis {request_id} failed")
-        try:
-            self.retry(exc=exc)
-        except Exception:
-            return _fail(request_id, f"فشل التحليل: {str(exc)[:300]}")
+        return _fail(request_id, f"فشل التحليل: {str(exc)[:300]}")
 
 
 # =====================================================================
@@ -261,7 +242,7 @@ def _to_iso_date(value: Any) -> Optional[str]:
     if not value:
         return None
     if isinstance(value, str):
-        return value[:10]  # YYYY-MM-DD
+        return value[:10]
     try:
         return value.isoformat()[:10]
     except Exception:

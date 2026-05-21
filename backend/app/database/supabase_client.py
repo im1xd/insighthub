@@ -3,7 +3,7 @@ Supabase Client Wrapper - كل التفاعلات مع Supabase تمر من هن
 
 يستخدم Service Role Key لتجاوز RLS أثناء معالجة الـ backend.
 كل الدوال متزامنة (sync) لأن مكتبة supabase-py الحالية متزامنة،
-ولأن Celery workers تعمل sync بطبيعتها.
+ولأنها تُستدعى من BackgroundTasks الذي يدعم الدوال المتزامنة.
 """
 
 from __future__ import annotations
