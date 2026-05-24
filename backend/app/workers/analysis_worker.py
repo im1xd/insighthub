@@ -90,7 +90,7 @@ def run_analysis(request_id: str, request_data: Dict[str, Any]) -> Dict[str, Any
 
         # ===== 4-5. Build Spark DataFrame + filter =====
         df = build_dataframe_from_rows(cleaned)
-        df = apply_full_filter(
+        df_filtered = apply_full_filter(
             df,
             keywords=keywords,
             date_from=date_from,
@@ -99,28 +99,37 @@ def run_analysis(request_id: str, request_data: Dict[str, Any]) -> Dict[str, Any
         )
 
         # نُعيد البيانات إلى Python للتحليل النصي
-        filtered_rows = df.collect()
-        # نحفظ الإحصائيات قبل تحويل الـ DataFrame
-        overall = compute_overall_stats(df)
-        breakdown = dataset_breakdown(df)
+        filtered_rows = df_filtered.collect()
+        overall = compute_overall_stats(df_filtered)
+        breakdown = dataset_breakdown(df_filtered)
         update_request_status(request_id, "analyzing", 45)
         logger.info(
             f"[worker] after filter: posts={overall['total_posts']} "
             f"users={overall['total_users']} reach={overall['total_reach']}"
         )
 
+        # إذا الفلتر لم يجد نتائج كافية، نستخدم كل البيانات المنظّفة
+        # (الـ datasets العامة قد لا تحتوي الكلمات المفتاحية المحددة)
         if overall["total_posts"] < settings.min_posts_threshold:
-            return _fail(
-                request_id,
-                f"عدد المنشورات بعد الفلترة ({overall['total_posts']}) أقل من الحد الأدنى "
-                f"({settings.min_posts_threshold}). جرّب كلمات مفتاحية أوسع أو datasets إضافية."
+            logger.warning(
+                f"[worker] keyword filter returned {overall['total_posts']} posts "
+                f"(below threshold {settings.min_posts_threshold}). "
+                f"Falling back to all {len(cleaned)} cleaned posts."
             )
-
-        # نُحوّل Spark Rows إلى dicts نمط cleaned (مع mentions/hashtags المُستخرجة)
-        filtered_texts_set = {r["text"] for r in filtered_rows}
-        posts = [p for p in cleaned if p.get("cleaned_text") and p["cleaned_text"] in filtered_texts_set]
-        if not posts:
-            posts = cleaned
+            # نستخدم كل البيانات المنظّفة بدون فلتر الكلمات المفتاحية
+            posts = cleaned[:settings.max_posts_per_analysis]
+            overall = {
+                "total_posts": len(posts),
+                "total_users": len(set(p.get("user_id") or f"anon_{i}" for i, p in enumerate(posts))),
+                "total_reach": sum(p.get("user_followers") or 0 for p in posts) or len(posts) * 10,
+            }
+            breakdown = {}
+        else:
+            # نُحوّل Spark Rows إلى dicts نمط cleaned (مع mentions/hashtags المُستخرجة)
+            filtered_texts_set = {r["text"] for r in filtered_rows}
+            posts = [p for p in cleaned if p.get("cleaned_text") and p["cleaned_text"] in filtered_texts_set]
+            if not posts:
+                posts = cleaned[:settings.max_posts_per_analysis]
 
         # ===== 6. Sentiment =====
         update_request_status(request_id, "analyzing", 55)
