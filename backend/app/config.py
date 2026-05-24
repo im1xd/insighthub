@@ -23,10 +23,6 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_service_key: str = ""
 
-    # ---------- Redis / Celery ----------
-    redis_url: str = "redis://localhost:6379/0"
-    celery_result_backend: str = "redis://localhost:6379/1"
-
     # ---------- App ----------
     app_env: str = "development"
     api_host: str = "0.0.0.0"
