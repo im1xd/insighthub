@@ -53,20 +53,20 @@ def in_progress_count() -> int:
 def run_with_concurrency(request_id: str, request_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Wrapper يستدعي run_analysis تحت قفل توازي.
-    BackgroundTasks سيستدعي هذه الدالة (وليس run_analysis مباشرة).
+    يُستدعى من poll_loop أو BackgroundTasks.
+
+    ملاحظة: claim() يجب أن تكون قد استُدعيت مسبقاً من poll_loop أو api.
+    هذه الدالة لا تُعيد claim — فقط تُنفّذ وتحرّر.
     """
     from app.workers.analysis_worker import run_analysis
 
-    # claim قد تم بالفعل قبل استدعاء البلوك (في api أو polling)
-    # لكن للأمان نتحقق
-    if not claim(request_id):
-        logger.warning(f"[runner] {request_id} already in progress, skipping")
-        return {"status": "skipped", "reason": "already_in_progress"}
-
     try:
+        logger.info(f"[runner] starting {request_id} (concurrent={in_progress_count()})")
         with _semaphore:
-            logger.info(f"[runner] starting {request_id} (concurrent={in_progress_count()})")
             return run_analysis(request_id, request_data)
+    except Exception as e:
+        logger.error(f"[runner] {request_id} crashed: {e}")
+        return {"status": "failed", "request_id": request_id, "error": str(e)}
     finally:
         release(request_id)
         logger.info(f"[runner] released {request_id}")

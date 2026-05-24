@@ -54,8 +54,17 @@ async def poll_loop():
                 if not claim(rid):
                     continue
                 logger.info(f"[poll] dispatching {rid}")
-                # نشغّل في thread pool لأن run_with_concurrency متزامنة وثقيلة
-                loop.run_in_executor(None, run_with_concurrency, rid, req)
+                # نشغّل في thread منفصل (daemon) لأن run_with_concurrency ثقيلة
+                import threading
+                t = threading.Thread(
+                    target=run_with_concurrency,
+                    args=(rid, req),
+                    daemon=True,
+                    name=f"worker-{rid[:8]}",
+                )
+                t.start()
+                # ننتظر فقط لطلب واحد في كل دورة polling
+                break
         except Exception as e:
             logger.error(f"[poll] error: {e}")
         await asyncio.sleep(interval)
